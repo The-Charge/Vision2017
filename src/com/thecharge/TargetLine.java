@@ -2,9 +2,12 @@ package com.thecharge;
 import com.thecharge.GripPipelineGym.Line;
 
 public class TargetLine implements Comparable {
+	
 	public static double lenTotal=0;
-			public double xAvg;
+	public double xAvg;
 	public double ocvX1, ocvX2, ocvY1, ocvY2, angle, length;
+	double maxAngleErr = 8;    // How far from vertical or horizontal will be included?
+
 	public TargetLine(Line line){
 		this.ocvX1 = line.x1;
 		this.ocvX2 = line.x2;
@@ -19,8 +22,8 @@ public class TargetLine implements Comparable {
 	public double lenPerc(){
 		return this.length / TargetLine.lenTotal;
 	}
-	public boolean isVerticle(){
-		double maxAngleErr = 5;
+	public boolean isVertical(){
+		//double maxAngleErr = 8;
 		if ((this.angle > (90 - maxAngleErr)) && (this.angle < (90 + maxAngleErr))) {
 			return true;
 		} else if ((this.angle > (-90 - maxAngleErr)) && (this.angle < (-90 + maxAngleErr))) {
@@ -30,8 +33,9 @@ public class TargetLine implements Comparable {
 		}
 
 	}
+	
 	public boolean isHorizontal(){
-		double maxAngleErr = 5;
+		//double maxAngleErr = 8;
 		if ((this.angle > (0 - maxAngleErr)) && (this.angle < (0 + maxAngleErr))) {
 			return true;
 		} else if ((this.angle > (180 - maxAngleErr)) && (this.angle < (180 + maxAngleErr))) {
@@ -47,5 +51,21 @@ public class TargetLine implements Comparable {
 	public int compareTo(Object o) {
 		TargetLine tl = (TargetLine)o;
 		return Double.compare(this.xAvg, tl.xAvg);
+	}
+	
+	@Override
+	public String toString(){
+		String lineOut = "";
+		lineOut += xAvg;
+		lineOut += "," + this.angle;
+		lineOut += "," + this.length;
+		lineOut += "," + this.ocvX1;
+		lineOut += "," + this.ocvX2;
+		lineOut += "," + this.ocvY1;
+		lineOut += "," + this.ocvY2;
+		lineOut += "," + this.lenPerc();
+		lineOut += "," + this.isVertical();
+		lineOut += "," + this.isHorizontal();
+		return lineOut;
 	}
 }
