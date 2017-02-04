@@ -43,8 +43,8 @@ public class GripPipelineGym /*implements VisionPipeline*/ {
 	public void process(Mat source0) {
 		// Step HSL_Threshold0:
 		Mat hslThresholdInput = source0;
-		final double loHue = 74.46043165467626;
-		final double hiHue = 93.99317406143345;
+		final double loHue = 74;	// 74.46043165467626;
+		final double hiHue = 96;	// 93.99317406143345;
 		final double loSat = 45.86330935251798;
 		final double hiSat = 128.80546075085323;
 		final double loLum = 80.26079136690647;
