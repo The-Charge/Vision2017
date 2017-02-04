@@ -73,9 +73,11 @@ public class HelloOCV {
 		// TargetLine[] vertLines = (TargetLine[])
 		// Arrays.stream(targetLines).filter(line->line.isVertical()).toArray();
 
-		Imgproc.line(image, targetLines[1].point1(), targetLines[1].point2(), new Scalar(0,255,0),3);
-
-		Imgcodecs.imwrite("img_with_line.jpg", image);
+		for (int zLpCtr1 = 0; zLpCtr1 < ocvLineCount; zLpCtr1++){
+			Imgproc.line(image, targetLines[zLpCtr1].point1(), targetLines[zLpCtr1].point2(), new Scalar(0,255,0),3);
+		}
+		
+		Imgcodecs.imwrite("img_with_lines.jpg", image);
 		
 		// Determine which lines probably group together based on spacing from
 		// other vertical lines
