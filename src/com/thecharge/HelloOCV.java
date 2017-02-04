@@ -115,6 +115,7 @@ public class HelloOCV {
 		// corresponds with the 6.25" gap between targets.
 		isSameLine = 0.25 * maxDiffX / inchGapBetw;
 		if (isSameLine < 2) {
+			// It may not be reasonable to expect resolution beyond a couple of pixels
 			isSameLine = 2;
 		}
 
@@ -186,11 +187,13 @@ public class HelloOCV {
 		double[] ymaxVlineRslt = new double[ocvLineCount]; // Maximum y coordinate of the particular vertical line set
 		double testY1 = 0;
 		double testY2 = 0;
+		double okVLGap = 12;
 		int diffVLCount = 0;	// The count of the number of different vertical lines in the group, hopefully 1
 		boolean wasAppd = false;
 		
 		// For each vertical line group, find the longest continguous series of associated segments (ideally 1 series)
 		for (int zLpCtr1 = 0; zLpCtr1 <= vLineSet; zLpCtr1++) {
+			System.out.println("Evaluating vertical line group " + Integer.toString(zLpCtr1));
 			diffVLCount = 0;
 			// For each original line relating to this line group, append as able
 			for (int zLpCtr2 = 0; zLpCtr2 < ocvLineCount; zLpCtr2++) {
@@ -199,7 +202,7 @@ public class HelloOCV {
 						// At least for now, confirm that we're evaluating all of the appropriate veritical lines
 						System.out.println("Evaluating for grouping vertical line " + Integer.toString(zLpCtr2));
 
-						// Having found another line within the line group, get the min and max and see if we can append it to one of the sets
+						// Having found an(other) line within the line group, get the min and max and see if we can append it to one of the sets
 						// or whether we possibly have to append the set
 						if (targetLines[zLpCtr2].ocvY1 < targetLines[zLpCtr2].ocvY2) {
 							testY1 = targetLines[zLpCtr2].ocvY1;
@@ -211,6 +214,7 @@ public class HelloOCV {
 							
 							
 						if (diffVLCount == 0) {
+							System.out.println("Initializing resulting vertical line " + Integer.toString(zLpCtr1));
 							// Prepare either to compare this segment with other segments in hope of appending vertical lines...
 							yminVlineEvl[diffVLCount] = testY1;
 							ymaxVlineEvl[diffVLCount] = testY2;
@@ -223,7 +227,7 @@ public class HelloOCV {
 							wasAppd = false;
 							for (int zLpCtr3 = 0; zLpCtr3 < diffVLCount; zLpCtr3++){
 								if (testY2 > ymaxVlineEvl[zLpCtr3]){
-									if (testY1 < (ymaxVlineEvl[zLpCtr3] + isSameLine)) {
+									if (testY1 < (ymaxVlineEvl[zLpCtr3] + okVLGap)) {
 										// Append the two lines
 										ymaxVlineEvl[zLpCtr3] = testY2;
 										if (testY1 < yminVlineEvl[zLpCtr3]) {
@@ -244,7 +248,7 @@ public class HelloOCV {
 												// Possibly append this new grouped segment with other segments 
 												// before or after in the array, retaining lower array position
 												if (ymaxVlineEvl[zLpCtr4] > ymaxVlineEvl[zLpCtr3]) {
-													if ((yminVlineEvl[zLpCtr4] > (yminVlineEvl[zLpCtr3] - isSameLine)) && (yminVlineEvl[zLpCtr4] < (ymaxVlineEvl[zLpCtr3] + isSameLine))){
+													if ((yminVlineEvl[zLpCtr4] > (yminVlineEvl[zLpCtr3] - okVLGap)) && (yminVlineEvl[zLpCtr4] < (ymaxVlineEvl[zLpCtr3] + okVLGap))){
 														// Append the lines
 														if (zLpCtr3 == (diffVLCount - 1)) {
 															// Update at zLpCtr4 and eliminate at zLpCtr3
@@ -285,7 +289,7 @@ public class HelloOCV {
 														
 													}
 												} else {
-													if ((yminVlineEvl[zLpCtr3] > (yminVlineEvl[zLpCtr4] - isSameLine)) && (yminVlineEvl[zLpCtr3] < (ymaxVlineEvl[zLpCtr4] + isSameLine))){
+													if ((yminVlineEvl[zLpCtr3] > (yminVlineEvl[zLpCtr4] - okVLGap)) && (yminVlineEvl[zLpCtr3] < (ymaxVlineEvl[zLpCtr4] + okVLGap))){
 														// Append the lines
 														if (zLpCtr3 == (diffVLCount - 1)) {
 															// Update at zLpCtr4 and eliminate at zLpCtr3
@@ -335,18 +339,24 @@ public class HelloOCV {
 								} else {
 									// So (testY2 <= ymaxVlineEvl[zLpCtr3])
 									// Same logic but reversing the evaluation
-									if (testY2 > (yminVlineEvl[zLpCtr3] - isSameLine)) {
+									if (testY2 > (yminVlineEvl[zLpCtr3] - okVLGap)) {
 										// Append the two lines
 										yminVlineEvl[zLpCtr3] = testY1;
 										wasAppd = true;
 										
+										// Assess whether we now have a new longest combined line segment at this x value
+										if ((ymaxVlineEvl[zLpCtr3] - yminVlineEvl[zLpCtr3]) > (ymaxVlineRslt[zLpCtr1] - yminVlineRslt[zLpCtr1])) {
+											yminVlineRslt[zLpCtr1] = yminVlineEvl[zLpCtr3];
+											ymaxVlineRslt[zLpCtr1] = ymaxVlineEvl[zLpCtr3];
+										}
+																				
 										// Having appended the segments, evaluate the ability to append additional segments
 										for (int zLpCtr4 = 0; zLpCtr4 < diffVLCount; zLpCtr4++) {
 											if (zLpCtr4 != zLpCtr3) {
 												// Possibly append this new grouped segment with other segments 
 												// before or after in the array, retaining lower array position
 												if (ymaxVlineEvl[zLpCtr4] > ymaxVlineEvl[zLpCtr3]) {
-													if ((yminVlineEvl[zLpCtr4] > (yminVlineEvl[zLpCtr3] - isSameLine)) && (yminVlineEvl[zLpCtr4] < (ymaxVlineEvl[zLpCtr3] + isSameLine))){
+													if ((yminVlineEvl[zLpCtr4] > (yminVlineEvl[zLpCtr3] - okVLGap)) && (yminVlineEvl[zLpCtr4] < (ymaxVlineEvl[zLpCtr3] + okVLGap))){
 														// Append the lines
 														if (zLpCtr3 == (diffVLCount - 1)) {
 															// Update at zLpCtr4 and eliminate at zLpCtr3
@@ -387,7 +397,7 @@ public class HelloOCV {
 														
 													}
 												} else {
-													if ((yminVlineEvl[zLpCtr3] > (yminVlineEvl[zLpCtr4] - isSameLine)) && (yminVlineEvl[zLpCtr3] < (ymaxVlineEvl[zLpCtr4] + isSameLine))){
+													if ((yminVlineEvl[zLpCtr3] > (yminVlineEvl[zLpCtr4] - okVLGap)) && (yminVlineEvl[zLpCtr3] < (ymaxVlineEvl[zLpCtr4] + okVLGap))){
 														// Append the lines
 														if (zLpCtr3 == (diffVLCount - 1)) {
 															// Update at zLpCtr4 and eliminate at zLpCtr3
@@ -435,8 +445,7 @@ public class HelloOCV {
 										zLpCtr3 = diffVLCount + 1;
 									}
 								}
-							}
-							
+							}	
 							if (!wasAppd) {
 								// Record them separately for now
 								yminVlineEvl[diffVLCount] = testY1;
@@ -444,11 +453,6 @@ public class HelloOCV {
 								diffVLCount ++;
 							}
 						}
-							
-							
-							
-							
-							
 					}
 				}
 			}
@@ -462,6 +466,11 @@ public class HelloOCV {
 		// Put the generated image back out to a file
 		Imgcodecs.imwrite("RDW2619.jpg", gp.hslThresholdOutput());
 
+		// Get the accompanying horizontal lines in order to validate the height of the rectangles
+		for (int zLpCtr1 = 0; zLpCtr1 < ocvLineCount; zLpCtr1++) {
+			
+		}
+		
 		// findlines experiment focusing in particular on vertical lines
 		
 		// Houghlines (standard) experiment
