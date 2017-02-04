@@ -1,4 +1,6 @@
 package com.thecharge;
+import org.opencv.core.Point;
+
 import com.thecharge.GripPipelineGym.Line;
 
 public class TargetLine implements Comparable {
@@ -32,6 +34,14 @@ public class TargetLine implements Comparable {
 			return false;
 		}
 
+	}
+	
+	public Point point1(){
+		return new Point(this.ocvX1, this.ocvY1);
+	}
+
+	public Point point2(){
+		return new Point(this.ocvX2, this.ocvY2);
 	}
 	
 	public boolean isHorizontal(){

@@ -9,7 +9,9 @@ import java.io.PrintWriter;
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
+import org.opencv.core.Scalar;
 import org.opencv.imgcodecs.Imgcodecs;
+import org.opencv.imgproc.Imgproc;
 
 import com.thecharge.GripPipelineGym.Line;
 
@@ -71,6 +73,10 @@ public class HelloOCV {
 		// TargetLine[] vertLines = (TargetLine[])
 		// Arrays.stream(targetLines).filter(line->line.isVertical()).toArray();
 
+		Imgproc.line(image, targetLines[1].point1(), targetLines[1].point2(), new Scalar(0,255,0),3);
+
+		Imgcodecs.imwrite("img_with_line.jpg", image);
+		
 		// Determine which lines probably group together based on spacing from
 		// other vertical lines
 		double lastxAvg = 0;
