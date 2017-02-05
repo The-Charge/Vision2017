@@ -56,7 +56,15 @@ public class HelloOCV {
 		ocvLineCount = lines.size();
 		System.out.println("Number of lines = " + ocvLineCount);
 
+		System.out.println(" ");
+		
 		double[] xAvgDiff = new double[(int) ocvLineCount];
+		String[] edgeID = new String[(int) ocvLineCount];
+
+		// Initialize the string array
+		for (int zLpCtr1 = 0; zLpCtr1 < ocvLineCount; zLpCtr1++) {
+			edgeID[zLpCtr1] = "";
+		}
 
 		TargetLine[] targetLines = new TargetLine[(int) ocvLineCount];
 
@@ -102,6 +110,8 @@ public class HelloOCV {
 		}
 		System.out.println("The maximum differential was " + Double.toString(maxDiffX));
 
+		System.out.println(" ");
+		
 		// Sum the line lengths for grouped lines
 		int vLineSet = 0; // How many sets of vertical lines are observed
 		double[] ttlVLens = new double[(int) ocvLineCount]; // An array of
@@ -184,9 +194,11 @@ public class HelloOCV {
 		
 		System.out.println("The number of line sets is " + Integer.toString(vLineSet + 1));
 		// What do we do if we don't find at least 4 lines
-		if (vLineSet<3) {
-			throw new Exception("vLineSet is less than 4.");
+		if (vLineSet < 3) {
+			throw new Exception("vLineSet is less than 3 (less than 4 vertical lines).");
 		}
+		
+		System.out.println(" ");
 		
 		// Find the longest contiguous chain of lines for each vertical line group identified
 		double[] yminVlineEvl = new double[(int) ocvLineCount]; // Minimum y coordinate of the particular vertical line
@@ -466,9 +478,148 @@ public class HelloOCV {
 			}
 		}
 		
+		System.out.println(" ");
+		
+		int tgt1LeftXPtr = 0;
+		int tgt1RightXPtr = 0;
+		int tgt2LeftXPtr = 0;
+		int tgt2RightXPtr = 0;
+		
 		// Find the best 4 lines to use in the analysis
-		for (int zLpCtr = vLineSet; zLpCtr >= 3; zLpCtr--) {
+		if (vLineSet == 3) {
+			tgt1LeftXPtr = 0;
+			tgt1RightXPtr = 1;
+			tgt2LeftXPtr = 2;
+			tgt2RightXPtr = 3;
+		} else {
+			throw new Exception("vLineSet is perhaps greater than 4 and handling logic is required.");
+		}
+		
+		// Find the horizontal lines of the targets
+		double[] xminHlineEvl = new double[(int) ocvLineCount]; // Minimum y coordinate of the particular vertical line
+		double[] xmaxHlineEvl = new double[(int) ocvLineCount]; // Maximum y coordinate of the particular vertical line
+		double[] xminHlineRslt = new double[ocvLineCount]; // Minimum y coordinate of the particular vertical line set
+		double[] xmaxHlineRslt = new double[ocvLineCount]; // Maximum y coordinate of the particular vertical line set
+		double testX1 = 0;
+		double testX2 = 0;
+		double okHLGap = 12;
+		double nomYTgtTop = 0;
+		double nomYTgtBtm = 0;
+		double nomXTgt1L = 0;
+		double nomXTgt1R = 0;
+		double nomXTgt2L = 0;
+		double nomXTgt2R = 0;
 
+		// Initialize the arrays for the x max and min for the horizontal lines
+		for (int zLpCtr1 = 0; zLpCtr1 <= vLineSet; zLpCtr1 ++) {
+			xminHlineRslt[zLpCtr1] = pxlWidth;
+			xmaxHlineRslt[zLpCtr1] = 0;
+		}
+		
+ 		// Note the nominal target top and bottom values (calculate a simple average from the vertical lines)
+		for (int zLpCtr1 = 0; zLpCtr1 <= vLineSet; zLpCtr1 ++) {
+			nomYTgtBtm += yminVlineRslt[zLpCtr1];
+			nomYTgtTop += ymaxVlineRslt[zLpCtr1];
+		}
+		nomYTgtBtm = nomYTgtBtm/(vLineSet + 1);
+		nomYTgtTop = nomYTgtTop/(vLineSet + 1);
+		
+		System.out.println("The top of the target is estimated at " + Double.toString(nomYTgtTop));
+		System.out.println("The bottom of the target is estimated at " + Double.toString(nomYTgtBtm));
+		System.out.println("The allowable error is " + Double.toString(okHLGap));
+		
+		// Note the nominal left and right target X values for each of the two targets
+		nomXTgt1L = nomVlineX[tgt1LeftXPtr];
+		System.out.println("Left edge of target 1 has x = " + Double.toString(nomXTgt1L));
+		nomXTgt1R = nomVlineX[tgt1RightXPtr];
+		System.out.println("Right edge of target 1 has x = " + Double.toString(nomXTgt1R));
+		nomXTgt2L = nomVlineX[tgt2LeftXPtr];
+		System.out.println("Left edge of target 2 has x = " + Double.toString(nomXTgt2L));
+		nomXTgt2R = nomVlineX[tgt2RightXPtr];
+		System.out.println("Right edge of target 2 has x = " + Double.toString(nomXTgt2R));
+		System.out.println(" ");
+
+		//int diffHLCount = 0;	// The count of the number of different horizontal lines in the group, hopefully 1
+		// For each of the vertical lines, assess whether it is part of the top or the bottom of one of the rectangular targets
+		for (int zLpCtr1 = 0; zLpCtr1 < ocvLineCount; zLpCtr1++) {
+			// No processing required for lines that aren't horizontal
+			if (targetLines[zLpCtr1].isHorizontal()) {
+				// For each of the grouped vertical line pairs, look for the target tops and bottoms
+				
+				System.out.println("Evaluating horizontal line " + Integer.toString(zLpCtr1));
+
+				// Having found an(other) line within the line group, get the min and max and see if we can validate the target's horizontal lines
+				if (targetLines[zLpCtr1].ocvX1 < targetLines[zLpCtr1].ocvX2) {
+					testX1 = targetLines[zLpCtr1].ocvX1;
+					testX2 = targetLines[zLpCtr1].ocvX2;
+				} else {	
+					testX1 = targetLines[zLpCtr1].ocvX2;
+					testX2 = targetLines[zLpCtr1].ocvX1;
+				}	
+				
+				// Because the line is roughly horizontal, it doesn't matter much whether we choose Y1 or Y2
+				if ((targetLines[zLpCtr1].ocvY1 < (nomYTgtTop + okHLGap)) && (targetLines[zLpCtr1].ocvY1 > (nomYTgtTop - okHLGap))) {
+					System.out.println("Initial top alignment for line " + Integer.toString(zLpCtr1));
+					
+					// Assess whether we're looking at the left or the right target for this line
+					if ((testX1 > (nomXTgt1L - okHLGap)) && (testX2 < (nomXTgt1R + okHLGap))) {
+						// Top left horizontal target line
+						edgeID[zLpCtr1] = "1HT";
+						xminHlineEvl[1] = testX1;
+						xmaxHlineEvl[1] = testX2;
+						if (testX1 < xminHlineRslt[1]) {
+							xminHlineRslt[1] = testX1;
+						}
+						if (testX2 > xmaxHlineRslt[1]) {
+							xmaxHlineRslt[1] = testX2;
+						}
+						
+					} else if ((testX1 > (nomXTgt2L - okHLGap)) && (testX2 < (nomXTgt2R + okHLGap))) {
+						// Top right horizontal target line
+						edgeID[zLpCtr1] = "2HT";
+						xminHlineEvl[3] = testX1;
+						xmaxHlineEvl[3] = testX2;
+						if (testX1 < xminHlineRslt[3]) {
+							xminHlineRslt[3] = testX1;
+						}
+						if (testX2 > xmaxHlineRslt[3]) {
+							xmaxHlineRslt[3] = testX2;
+						}
+						
+					}
+					
+				} else if ((targetLines[zLpCtr1].ocvY1 < (nomYTgtBtm + okHLGap)) && (targetLines[zLpCtr1].ocvY1 > (nomYTgtBtm - okHLGap))) {
+					System.out.println("Initial bottom alignment for line " + Integer.toString(zLpCtr1));
+
+					// Assess whether we're looking at the left or the right target for this line
+					if ((testX1 > (nomXTgt1L - okHLGap)) && (testX2 < (nomXTgt1R + okHLGap))) {
+						// Bottom left horizontal target line
+						edgeID[zLpCtr1] = "1HB";
+						xminHlineEvl[0] = testX1;
+						xmaxHlineEvl[0] = testX2;
+						if (testX1 < xminHlineRslt[0]) {
+							xminHlineRslt[0] = testX1;
+						}
+						if (testX2 > xmaxHlineRslt[0]) {
+							xmaxHlineRslt[0] = testX2;
+						}
+						
+					} else if ((testX1 > (nomXTgt2L - okHLGap)) && (testX2 < (nomXTgt2R + okHLGap))) {
+						// Bottom right horizontal target line
+						edgeID[zLpCtr1] = "2HB";
+						xminHlineEvl[2] = testX1;
+						xmaxHlineEvl[2] = testX2;
+						if (testX1 < xminHlineRslt[2]) {
+							xminHlineRslt[2] = testX1;
+						}
+						if (testX2 > xmaxHlineRslt[2]) {
+							xmaxHlineRslt[2] = testX2;
+						}
+						
+					}
+					
+				}
+			}
 		}
 		
 		// Put the generated image back out to a file
@@ -491,33 +642,12 @@ public class HelloOCV {
 
 			outputStream = new PrintWriter(new FileWriter("ocvLineOutput.txt"));
 
-			outputStream.println("AvgX,Angle,Length,X1,X2,Y1,Y2,VLenPerc,IsVert,IsHorz,XAvgDiff,TtlVLen,VXCoord,VYmin,VYmax");
+			outputStream.println("AvgX,Angle,Length,X1,X2,Y1,Y2,VLenPerc,IsVert,IsHorz,XAvgDiff,Bounds");
 			for (int linecount = 0; linecount < targetLines.length; linecount++) {
-				/*
-				 * LineOut = Double.toString(xAvg[linecount]); LineOut = LineOut
-				 * + "," + Double.toString(ocvAngle[linecount]); LineOut =
-				 * LineOut + "," +
-				 * Double.toString(gp.findLinesOutput().get(linecount).length())
-				 * ; LineOut = LineOut + "," +
-				 * Double.toString(gp.findLinesOutput().get(linecount).x1);
-				 * LineOut = LineOut + "," +
-				 * Double.toString(gp.findLinesOutput().get(linecount).x2);
-				 * LineOut = LineOut + "," +
-				 * Double.toString(gp.findLinesOutput().get(linecount).y1);
-				 * LineOut = LineOut + "," +
-				 * Double.toString(gp.findLinesOutput().get(linecount).y2);
-				 * LineOut = LineOut + "," + ocvVLenContr[linecount]; LineOut =
-				 * LineOut + "," + isVertcl[linecount]; LineOut = LineOut + ","
-				 * + isHorzntl[linecount];
-				 */
-				// LineOut = String.format ("%.f4", xAvg);
-				// if (targetLines[linecount].isVertical()) {
 				LineOut = "" + targetLines[linecount];
 				LineOut += "," + Double.toString(xAvgDiff[linecount]);
-				LineOut += "," + Double.toString(ttlVLens[linecount]);
-				LineOut += "," + Double.toString(nomVlineX[linecount]);
-				LineOut += "," + Double.toString(yminVlineRslt[linecount]);
-				LineOut += "," + Double.toString(ymaxVlineRslt[linecount]);
+				LineOut += "," + edgeID[linecount];
+
 				outputStream.println(LineOut);
 				// }
 			}
@@ -527,6 +657,34 @@ public class HelloOCV {
 				outputStream.close();
 			}
 		}
-	}
 
+
+	try {
+
+		outputStream = new PrintWriter(new FileWriter("RsltLineOutput.txt"));
+
+		outputStream.println("TtlVLen,VXCoord,VYmin,VYmax,HXmin,HXmax,Affil");
+		for (int linecount = 0; linecount <= vLineSet; linecount++) {
+			LineOut = Double.toString(ttlVLens[linecount]);
+			LineOut += "," + Double.toString(nomVlineX[linecount]);
+			LineOut += "," + Double.toString(yminVlineRslt[linecount]);
+			LineOut += "," + Double.toString(ymaxVlineRslt[linecount]);
+			LineOut += "," + Double.toString(xminHlineRslt[linecount]);
+			LineOut += "," + Double.toString(xmaxHlineRslt[linecount]);
+			LineOut += "," + edgeID[linecount];
+			outputStream.println(LineOut);
+			// }
+		}
+
+	} finally {
+		if (outputStream != null) {
+			outputStream.close();
+		}
+	}
+	}
+	
+	//System.exit(0);
 }
+
+
+
