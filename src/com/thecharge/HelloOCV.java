@@ -81,13 +81,16 @@ public class HelloOCV {
 		// TargetLine[] vertLines = (TargetLine[])
 		// Arrays.stream(targetLines).filter(line->line.isVertical()).toArray();
 
+		// Create a series of lines to overlay on the original image to assess the quality of the lines identified
+		// Note the color spec for BGR rather than RGB
 		for (int zLpCtr1 = 0; zLpCtr1 < ocvLineCount; zLpCtr1++){
-			Imgproc.line(image, targetLines[zLpCtr1].point1(), targetLines[zLpCtr1].point2(), new Scalar(0,255,0),3);
+			Imgproc.line(image, targetLines[zLpCtr1].point1(), targetLines[zLpCtr1].point2(), new Scalar(0,255,255),3);
 		}
-		
+
+		// Save a copy of the amended file with the identified lines
 		Imgcodecs.imwrite("img_with_lines.jpg", image);
 		
-		// Determine which lines probably group together based on spacing from
+		// Determine which vertical lines probably group together based on spacing from
 		// other vertical lines
 		double lastxAvg = 0;
 		double maxDiffX = 0;
@@ -484,6 +487,12 @@ public class HelloOCV {
 		int tgt1RightXPtr = 0;
 		int tgt2LeftXPtr = 0;
 		int tgt2RightXPtr = 0;
+		double rectRatio = 0;
+		double refRatio = 0;
+		double lTgtAccrW = 0;
+		double rTgtAccrW = 0;
+		
+		refRatio = inchGapBetw / inchTgtWide;
 		
 		// Find the best 4 lines to use in the analysis
 		if (vLineSet == 3) {
@@ -491,9 +500,22 @@ public class HelloOCV {
 			tgt1RightXPtr = 1;
 			tgt2LeftXPtr = 2;
 			tgt2RightXPtr = 3;
+			
+			// Now verify that we have acceptable spacing to presume these to be our targets
+			rectRatio = (nomVlineX[tgt2LeftXPtr] - nomVlineX[tgt1RightXPtr]);
+			rectRatio = rectRatio / (nomVlineX[tgt1RightXPtr] - nomVlineX[tgt1LeftXPtr]);
+			lTgtAccrW = rectRatio / refRatio;
+			System.out.println("The left target accuracy is 1 : " + Double.toString(lTgtAccrW));
+			
+			rectRatio = (nomVlineX[tgt2LeftXPtr] - nomVlineX[tgt1RightXPtr]);
+			rectRatio = rectRatio / (nomVlineX[tgt2RightXPtr] - nomVlineX[tgt2LeftXPtr]);
+			lTgtAccrW = rectRatio / refRatio;
+			System.out.println("The right target accuracy is 1 : " + Double.toString(lTgtAccrW));
+			
 		} else {
 			throw new Exception("vLineSet is perhaps greater than 4 and handling logic is required.");
 		}
+		System.out.println(" ");
 		
 		// Find the horizontal lines of the targets
 		double[] xminHlineEvl = new double[(int) ocvLineCount]; // Minimum y coordinate of the particular vertical line
@@ -619,6 +641,17 @@ public class HelloOCV {
 					}
 					
 				}
+			} else if (targetLines[zLpCtr1].isVertical()) {
+				// Make the vertical line associations having identified the four verticals of interest
+				if ((targetLines[zLpCtr1].xAvg < (nomVlineX[0] + isSameLine)) && (targetLines[zLpCtr1].xAvg > (nomVlineX[0] - isSameLine))) {
+					edgeID[zLpCtr1] = "1VL";
+				} else if ((targetLines[zLpCtr1].xAvg < (nomVlineX[1] + isSameLine)) && (targetLines[zLpCtr1].xAvg > (nomVlineX[1] - isSameLine))) {
+					edgeID[zLpCtr1] = "1VR";
+				} else if ((targetLines[zLpCtr1].xAvg < (nomVlineX[2] + isSameLine)) && (targetLines[zLpCtr1].xAvg > (nomVlineX[2] - isSameLine))) {
+					edgeID[zLpCtr1] = "2VL";
+				} else if ((targetLines[zLpCtr1].xAvg < (nomVlineX[3] + isSameLine)) && (targetLines[zLpCtr1].xAvg > (nomVlineX[3] - isSameLine))) {
+					edgeID[zLpCtr1] = "2VR";
+				}
 			}
 		}
 		
@@ -663,7 +696,7 @@ public class HelloOCV {
 
 		outputStream = new PrintWriter(new FileWriter("RsltLineOutput.txt"));
 
-		outputStream.println("TtlVLen,VXCoord,VYmin,VYmax,HXmin,HXmax,Affil");
+		outputStream.println("TtlVLen,VXCoord,VYmin,VYmax,HXmin,HXmax");
 		for (int linecount = 0; linecount <= vLineSet; linecount++) {
 			LineOut = Double.toString(ttlVLens[linecount]);
 			LineOut += "," + Double.toString(nomVlineX[linecount]);
@@ -671,7 +704,6 @@ public class HelloOCV {
 			LineOut += "," + Double.toString(ymaxVlineRslt[linecount]);
 			LineOut += "," + Double.toString(xminHlineRslt[linecount]);
 			LineOut += "," + Double.toString(xmaxHlineRslt[linecount]);
-			LineOut += "," + edgeID[linecount];
 			outputStream.println(LineOut);
 			// }
 		}
