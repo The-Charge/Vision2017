@@ -46,7 +46,7 @@ public class GripPipelineGym /*implements VisionPipeline*/ {
 		final double loHue = 74;	// 74.46043165467626;
 		final double hiHue = 96;	// 93.99317406143345;
 		final double loSat = 45.86330935251798;
-		final double hiSat = 128.80546075085323;
+		final double hiSat = 140;	//153;	// 128.80546075085323;
 		final double loLum = 80.26079136690647;
 		final double hiLum = 163.61774744027304;
 		

@@ -22,6 +22,9 @@ public class HelloOCV {
 		// Command = noun-verb
 		// Method = verb-noun
 
+		//String jpgFile = new String("LTGym3ft.jpg");
+		String jpgFile = new String("LTGym8ft.jpg");
+		//String jpgFile = new String("LTGym18ft.jpg");
 		long pxlWidth = 0;
 		long pxlHeight = 0;
 		int ocvLineCount = 0;
@@ -34,7 +37,7 @@ public class HelloOCV {
 		System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
 
 		// Load a test image from file for development
-		Mat image = Imgcodecs.imread("LTGym3ft.jpg");
+		Mat image = Imgcodecs.imread(jpgFile);
 
 		// Capture the image dimensions
 		pxlWidth = image.width();
@@ -81,10 +84,32 @@ public class HelloOCV {
 		// TargetLine[] vertLines = (TargetLine[])
 		// Arrays.stream(targetLines).filter(line->line.isVertical()).toArray();
 
+		// Save our line data out to a file
+		String LineOut;
+
+		PrintWriter outputStream = null;
+		try {
+
+			outputStream = new PrintWriter(new FileWriter("srtLineOutput.txt"));
+
+			outputStream.println("AvgX,Angle,Length,X1,X2,Y1,Y2,VLenPerc,IsVert,IsHorz");
+			for (int linecount = 0; linecount < targetLines.length; linecount++) {
+				LineOut = "" + targetLines[linecount];
+
+				outputStream.println(LineOut);
+				// }
+			}
+
+		} finally {
+			if (outputStream != null) {
+				outputStream.close();
+			}
+		}
+
 		// Create a series of lines to overlay on the original image to assess the quality of the lines identified
 		// Note the color spec for BGR rather than RGB
 		for (int zLpCtr1 = 0; zLpCtr1 < ocvLineCount; zLpCtr1++){
-			Imgproc.line(image, targetLines[zLpCtr1].point1(), targetLines[zLpCtr1].point2(), new Scalar(0,255,255),3);
+			Imgproc.line(image, targetLines[zLpCtr1].point1(), targetLines[zLpCtr1].point2(), new Scalar(0,255,255), 1);
 		}
 
 		// Save a copy of the amended file with the identified lines
@@ -494,6 +519,18 @@ public class HelloOCV {
 		
 		refRatio = inchGapBetw / inchTgtWide;
 		
+		boolean spacedOK = false;
+		double gap1 = 0;
+		double gap2 = 0;
+		double gap3 = 0;
+		double lineWt = 0;
+		double bestWt = 0;
+		Integer[] vertSel; 
+		vertSel = new Integer[4];
+		for (int zLpCtr1 = 0; zLpCtr1 < 4; zLpCtr1++) {
+			vertSel[zLpCtr1] = 0;
+		}
+		
 		// Find the best 4 lines to use in the analysis
 		if (vLineSet == 3) {
 			tgt1LeftXPtr = 0;
@@ -513,7 +550,52 @@ public class HelloOCV {
 			System.out.println("The right target accuracy is 1 : " + Double.toString(lTgtAccrW));
 			
 		} else {
-			throw new Exception("vLineSet is perhaps greater than 4 and handling logic is required.");
+			// Find the three sets of signals that yield the best 6.25 / 2 spacing ratio
+			for (int zLpCtr1 = 0; zLpCtr1 <= (vLineSet-3); zLpCtr1++) {
+				for (int zLpCtr2 = 1; zLpCtr2 <= (vLineSet-2); zLpCtr2++) {
+					for (int zLpCtr3 = 2; zLpCtr3 <= (vLineSet-1); zLpCtr3++) {
+						for (int zLpCtr4 = 3; zLpCtr4 <= vLineSet; zLpCtr4++) {
+							if ((zLpCtr1 < zLpCtr2) && (zLpCtr2 < zLpCtr3) && (zLpCtr3 < zLpCtr4)){
+								System.out.println("Assessing line set : " + Integer.toString(zLpCtr1) + ":" + Integer.toString(zLpCtr2) + ":" + Integer.toString(zLpCtr3) + ":" + Integer.toString(zLpCtr4));
+								spacedOK = false;
+								lineWt = 0;
+								gap1 = (nomVlineX[zLpCtr2] - nomVlineX[zLpCtr1]);
+								gap2 = (nomVlineX[zLpCtr3] - nomVlineX[zLpCtr2]);
+								gap3 = (nomVlineX[zLpCtr4] - nomVlineX[zLpCtr3]);
+								System.out.println("Assessing gap of : " + Double.toString(gap1));
+								System.out.println("Assessing gap of : " + Double.toString(gap2));
+								System.out.println("Assessing gap of : " + Double.toString(gap3));
+								if (((gap3 / gap1) < 1.5) && ((gap1 / gap3) < 1.5)) {
+									if (((gap2 / gap1) > 3) && ((gap2 / gap3) > 3)) {
+										if (((gap2 / gap1) < 10) && ((gap2 / gap3) < 10)) {
+											spacedOK = true;
+											lineWt = ttlVLens[zLpCtr1] + ttlVLens[zLpCtr2] + ttlVLens[zLpCtr3];
+											if (lineWt > bestWt) {
+												bestWt = lineWt;
+												vertSel[0] = zLpCtr1;
+												vertSel[1] = zLpCtr2;
+												vertSel[2] = zLpCtr3;
+												vertSel[3] = zLpCtr4;
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+			
+			System.out.println("Best weighted value : " + Double.toString(bestWt));
+			
+			if (bestWt == 0) {
+				throw new Exception("vLineSet is perhaps greater than 4 and handling logic is required.");
+			}
+			System.out.println("Selecting verticals : " + Integer.toString(vertSel[0]) + ":" + Integer.toString(vertSel[1]) + ":" + Integer.toString(vertSel[2]) + ":" + Integer.toString(vertSel[3]));
+			tgt1LeftXPtr = vertSel[0];
+			tgt1RightXPtr = vertSel[1];
+			tgt2LeftXPtr = vertSel[2];
+			tgt2RightXPtr = vertSel[3];
 		}
 		System.out.println(" ");
 		
@@ -667,10 +749,22 @@ public class HelloOCV {
 		
 		// Houghlines (standard) experiment
 
+		// We now want to get (8) x,y pairs for each of the (8) lines, 4 horizontal and 4 vertical
+		for (int zLpCtr1 = 0; zLpCtr1 < ocvLineCount; zLpCtr1++) {
+			// First for the vertical lines
+			for (int zLpCtr2 = 0; zLpCtr2 < 4; zLpCtr2++) {
+				
+			}
+			
+			// Then for the horizontal lines
+			for (int zLpCtr2 = 0; zLpCtr2 < 4; zLpCtr2++) {
+				
+			}
+			
+		}
+		
 		// Save our line data out to a file
-		String LineOut;
 
-		PrintWriter outputStream = null;
 		try {
 
 			outputStream = new PrintWriter(new FileWriter("ocvLineOutput.txt"));
