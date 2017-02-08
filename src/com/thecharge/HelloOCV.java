@@ -18,14 +18,21 @@ import com.thecharge.GripPipelineGym.Line;
 public class HelloOCV {
 
 	public static void main(String[] args) throws Exception {
+		// while(true);
+		for(int i=0; i<5; i++){
+			processSingleImage();
+		}
+	}
+	//System.exit(0);
 
+	private static void processSingleImage() throws IOException, Exception {
 		// Command = noun-verb
 		// Method = verb-noun
 
 		//String jpgFile = new String("LTGym3ft.jpg");
-		//String jpgFile = new String("LTGym6f45d.jpg");
+		String jpgFile = new String("LTGym6f45d.jpg");
 		//String jpgFile = new String("LTGym6f70d.jpg");
-		String jpgFile = new String("LTGym8ft.jpg");
+		//String jpgFile = new String("LTGym8ft.jpg");
 		//String jpgFile = new String("LTGym18ft.jpg");  // No lines found
 		long pxlWidth = 0;
 		long pxlHeight = 0;
@@ -60,7 +67,7 @@ public class HelloOCV {
 		// Using the class Pipeline, instantiate here with the specified image
 		// (replicate the class here)
 		GripPipelineGym gp = new GripPipelineGym();
-		gp.process(image);
+		gp.process(image, 74);
 
 		// Create a List (special Java Collection) of "line" type entries from
 		// the specified image processing class
@@ -830,7 +837,6 @@ public class HelloOCV {
 	dist2Target = halfFoView / tanHlfAngle;
 	System.out.println("The estimated distance to the target (in inches) is " + Double.toString(dist2Target));
 	}
-	//System.exit(0);
 }
 
 
