@@ -22,10 +22,10 @@ public class HelloOCV {
 		// Command = noun-verb
 		// Method = verb-noun
 
-		String jpgFile = new String("LTGym3ft.jpg");
+		//String jpgFile = new String("LTGym3ft.jpg");
 		//String jpgFile = new String("LTGym6f45d.jpg");
 		//String jpgFile = new String("LTGym6f70d.jpg");
-		//String jpgFile = new String("LTGym8ft.jpg");
+		String jpgFile = new String("LTGym8ft.jpg");
 		//String jpgFile = new String("LTGym18ft.jpg");  // No lines found
 		long pxlWidth = 0;
 		long pxlHeight = 0;
@@ -35,6 +35,14 @@ public class HelloOCV {
 		final double inchTgtHigh = 5; // Height of the reflective target
 		final double inchGnd2Tgt = 10.75; // Distance from the ground to the
 											// bottom of the target
+		final double halfFieldAngle = 34;	// Half of the angle of view for the camera in operation
+		double halfFoView = 0;	// Half of the field of view in inches
+		double tanHlfAngle = 0;	// Tangent of the half angle of field of view
+		double targetWidth = 0;	// The width of the target in inches
+		double dist2Target = 0;	// Calculated distance to the target in inches
+		
+		targetWidth = inchTgtWide + inchGapBetw + inchTgtWide;
+		tanHlfAngle = Math.tan(Math.toRadians(halfFieldAngle));
 
 		System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
 
@@ -816,8 +824,12 @@ public class HelloOCV {
 			outputStream.close();
 		}
 	}
-	}
 	
+	// Note:  This will have to be corrected as it currently assumes a 90 degree angle of incidence
+	halfFoView = 0.5 * targetWidth * pxlWidth / (nomXTgt2R - nomXTgt1L);
+	dist2Target = halfFoView / tanHlfAngle;
+	System.out.println("The estimated distance to the target (in inches) is " + Double.toString(dist2Target));
+	}
 	//System.exit(0);
 }
 
