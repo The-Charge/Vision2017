@@ -22,9 +22,11 @@ public class HelloOCV {
 		// Command = noun-verb
 		// Method = verb-noun
 
-		//String jpgFile = new String("LTGym3ft.jpg");
-		String jpgFile = new String("LTGym8ft.jpg");
-		//String jpgFile = new String("LTGym18ft.jpg");
+		String jpgFile = new String("LTGym3ft.jpg");
+		//String jpgFile = new String("LTGym6f45d.jpg");
+		//String jpgFile = new String("LTGym6f70d.jpg");
+		//String jpgFile = new String("LTGym8ft.jpg");
+		//String jpgFile = new String("LTGym18ft.jpg");  // No lines found
 		long pxlWidth = 0;
 		long pxlHeight = 0;
 		int ocvLineCount = 0;
@@ -204,7 +206,13 @@ public class HelloOCV {
 				cumulLen += targetLines[zLpCtr].length;
 				System.out.println("Expanded to " + Double.toString(cumulLen));
 				lastAdjVline = targetLines[zLpCtr].xAvg;
+				
+				// If this happens to be the very first vertical line of the set, initialize that value as well
+				if (firstAdjVline == 0) {
+					firstAdjVline = lastAdjVline;
+				}
 			}
+			// Note:  In this loop, nothing happens for lines that aren't vertical
 		}
 
 		// We may need to record the length of the last line group
@@ -239,7 +247,7 @@ public class HelloOCV {
 		int diffVLCount = 0;	// The count of the number of different vertical lines in the group, hopefully 1
 		boolean wasAppd = false;
 		
-		// For each vertical line group, find the longest continguous series of associated segments (ideally 1 series)
+		// For each vertical line group, find the longest contiguous series of associated segments (ideally 1 series)
 		for (int zLpCtr1 = 0; zLpCtr1 <= vLineSet; zLpCtr1++) {
 			System.out.println("Evaluating vertical line group " + Integer.toString(zLpCtr1));
 			diffVLCount = 0;
@@ -247,7 +255,7 @@ public class HelloOCV {
 			for (int zLpCtr2 = 0; zLpCtr2 < ocvLineCount; zLpCtr2++) {
 				if (targetLines[zLpCtr2].isVertical()) {
 					if ((targetLines[zLpCtr2].xAvg >= nomVlineX[zLpCtr1] - isSameLine) && (targetLines[zLpCtr2].xAvg <= nomVlineX[zLpCtr1] + isSameLine)) {
-						// At least for now, confirm that we're evaluating all of the appropriate veritical lines
+						// At least for now, confirm that we're evaluating all of the appropriate vertical lines
 						System.out.println("Evaluating for grouping vertical line " + Integer.toString(zLpCtr2));
 
 						// Having found an(other) line within the line group, get the min and max and see if we can append it to one of the sets
@@ -267,14 +275,14 @@ public class HelloOCV {
 							yminVlineEvl[diffVLCount] = testY1;
 							ymaxVlineEvl[diffVLCount] = testY2;
 							// But capture the result in case there are no more lines to append.
-							yminVlineRslt[zLpCtr1] = yminVlineEvl[zLpCtr2];
-							ymaxVlineRslt[zLpCtr1] = ymaxVlineEvl[zLpCtr2];
+							yminVlineRslt[zLpCtr1] = testY1;	//yminVlineEvl[zLpCtr2];
+							ymaxVlineRslt[zLpCtr1] = testY2;	//ymaxVlineEvl[zLpCtr2];
 							diffVLCount ++;
 						} else {
 							// Assess whether this next segment is simply an extension of a previous segment
 							wasAppd = false;
 							for (int zLpCtr3 = 0; zLpCtr3 < diffVLCount; zLpCtr3++){
-								if (testY2 > ymaxVlineEvl[zLpCtr3]){
+								if (testY2 > ymaxVlineEvl[zLpCtr3]) {
 									if (testY1 < (ymaxVlineEvl[zLpCtr3] + okVLGap)) {
 										// Append the two lines
 										ymaxVlineEvl[zLpCtr3] = testY2;
@@ -458,9 +466,9 @@ public class HelloOCV {
 															diffVLCount--; 
 														} else if (zLpCtr4 == (diffVLCount - 1)) {
 															// Update at zLpCtr3 and eliminate at zLpCtr4
-															ymaxVlineEvl[zLpCtr3] = ymaxVlineEvl[zLpCtr4];
-															if (yminVlineEvl[zLpCtr4] < yminVlineEvl[zLpCtr3]) {
-																yminVlineEvl[zLpCtr3] = yminVlineEvl[zLpCtr4];
+															yminVlineEvl[zLpCtr3] = yminVlineEvl[zLpCtr4];
+															if (ymaxVlineEvl[zLpCtr4] > ymaxVlineEvl[zLpCtr3]) {
+																ymaxVlineEvl[zLpCtr3] = ymaxVlineEvl[zLpCtr4];
 															}
 															yminVlineEvl[zLpCtr4] = 0;
 															ymaxVlineEvl[zLpCtr4] = 0;
@@ -489,7 +497,7 @@ public class HelloOCV {
 											}
 										}
 										
-										// Exit the loop having appended the segments together
+										// Exit the loop having appended the necessary segments together
 										zLpCtr3 = diffVLCount + 1;
 									}
 								}
@@ -533,6 +541,7 @@ public class HelloOCV {
 		
 		// Find the best 4 lines to use in the analysis
 		if (vLineSet == 3) {
+			// This represents the simplest scenario where we found exactly 4 vertical lines
 			tgt1LeftXPtr = 0;
 			tgt1RightXPtr = 1;
 			tgt2LeftXPtr = 2;

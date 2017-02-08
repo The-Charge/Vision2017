@@ -8,7 +8,7 @@ public class TargetLine implements Comparable {
 	public static double lenTotal=0;
 	public double xAvg;
 	public double ocvX1, ocvX2, ocvY1, ocvY2, angle, length;
-	double maxAngleErr = 8;    // How far from vertical or horizontal will be included?
+	double maxAngleErr = 15;	//8;    // How far from vertical or horizontal will be included?
 
 	public TargetLine(Line line){
 		this.ocvX1 = line.x1;
