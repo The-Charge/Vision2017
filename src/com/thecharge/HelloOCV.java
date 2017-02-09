@@ -12,28 +12,62 @@ import org.opencv.core.Mat;
 import org.opencv.core.Scalar;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
+import org.opencv.videoio.VideoCapture;
 
 import com.thecharge.GripPipelineGym.Line;
 
+import edu.wpi.first.wpilibj.networktables.NetworkTable;
+
 public class HelloOCV {
+	private static boolean useVIDEO = false;
 
 	public static void main(String[] args) throws Exception {
 		// while(true);
-		for(int i=0; i<5; i++){
-			processSingleImage();
+		System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
+		Mat image = new Mat();
+		
+		VideoCapture camera = null;
+		
+		if (useVIDEO) {
+			camera = new VideoCapture(1);
+	    	if(!camera.isOpened()){
+				throw new Exception("Can't open the camera.");
+	    	}
+		}
+		/*
+		NetworkTable.setClientMode();
+		NetworkTable.setIPAddress("127.0.0.1");
+		NetworkTable table = NetworkTable.getTable("RobotTbl");
+		table.putNumber("Distance", 30);
+		*/
+		for(int i=0; i<1; i++){
+			if (!useVIDEO) {
+				//String jpgFile = new String("LTGym3ft.jpg");
+				String jpgFile = new String("LTGym6f45d.jpg");
+				//String jpgFile = new String("LTGym6f70d.jpg");
+				//String jpgFile = new String("LTGym8ft.jpg");
+				//String jpgFile = new String("LTGym18ft.jpg");  // No lines found
+				
+
+				// Load a test image from file for development
+				image = Imgcodecs.imread(jpgFile);
+
+			} else {
+				camera.read(image);
+			}
+			
+			// Having selected a source, process the image
+			processSingleImage(image);
+		}
+		if (useVIDEO){
+			camera.release();
 		}
 	}
-	//System.exit(0);
 
-	private static void processSingleImage() throws IOException, Exception {
+	private static void processSingleImage(Mat image) throws IOException, Exception {
 		// Command = noun-verb
 		// Method = verb-noun
 
-		//String jpgFile = new String("LTGym3ft.jpg");
-		String jpgFile = new String("LTGym6f45d.jpg");
-		//String jpgFile = new String("LTGym6f70d.jpg");
-		//String jpgFile = new String("LTGym8ft.jpg");
-		//String jpgFile = new String("LTGym18ft.jpg");  // No lines found
 		long pxlWidth = 0;
 		long pxlHeight = 0;
 		int ocvLineCount = 0;
@@ -51,23 +85,22 @@ public class HelloOCV {
 		targetWidth = inchTgtWide + inchGapBetw + inchTgtWide;
 		tanHlfAngle = Math.tan(Math.toRadians(halfFieldAngle));
 
-		System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
-
-		// Load a test image from file for development
-		Mat image = Imgcodecs.imread(jpgFile);
-
 		// Capture the image dimensions
 		pxlWidth = image.width();
 		pxlHeight = image.height();
 		System.out.println("xdim = " + pxlWidth);
 		System.out.println("ydim = " + pxlHeight);
 
-		// System.out.println("mat = " + image.dump());
-
 		// Using the class Pipeline, instantiate here with the specified image
 		// (replicate the class here)
 		GripPipelineGym gp = new GripPipelineGym();
-		gp.process(image, 74);
+		double loHue = 74;
+		double hiHue = 96;	// 93.99317406143345;
+		double loSat = 45.86330935251798;
+		double hiSat = 140;	//153;	// 128.80546075085323;
+		double loLum = 80.26079136690647;
+		double hiLum = 163.61774744027304;
+		gp.process(image, loHue, hiHue, loSat, hiSat, loLum, hiLum);
 
 		// Create a List (special Java Collection) of "line" type entries from
 		// the specified image processing class
