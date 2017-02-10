@@ -22,8 +22,8 @@ import com.thecharge.GripPipelineGym.Line;
 public class HelloOCV {
 	private static boolean useVIDEO = false;
 	
-	private static long pxlWidth = 0;
-	private static long pxlHeight = 0;
+	private static int pxlWidth = 0;
+	private static int pxlHeight = 0;
 	private static int ocvLineCount = 0;
 	private static final double INCH_GAP_BETW = 6.25; // Distance between reflective targets
 	private static final double INCH_TGT_WIDE = 2; // Width of the reflective target
