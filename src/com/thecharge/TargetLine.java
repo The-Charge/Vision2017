@@ -25,7 +25,7 @@ public class TargetLine implements Comparable {
 		return this.length / TargetLine.lenTotal;
 	}
 	public boolean isVertical(){
-		//double maxAngleErr = 8;
+		
 		if ((this.angle > (90 - maxAngleErr)) && (this.angle < (90 + maxAngleErr))) {
 			return true;
 		} else if ((this.angle > (-90 - maxAngleErr)) && (this.angle < (-90 + maxAngleErr))) {

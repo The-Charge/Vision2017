@@ -2,6 +2,7 @@ package com.thecharge;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Random;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -34,12 +35,11 @@ public class HelloOCV {
 				throw new Exception("Can't open the camera.");
 	    	}
 		}
-		/*
-		NetworkTable.setClientMode();
-		NetworkTable.setIPAddress("127.0.0.1");
-		NetworkTable table = NetworkTable.getTable("RobotTbl");
-		table.putNumber("Distance", 30);
-		*/
+		//NetworkTable.setClientMode();
+		//NetworkTable.setIPAddress("127.0.0.1");
+		//NetworkTable table2Rbt = NetworkTable.getTable("Distance");
+		//table2Rbt.putNumber("Distance", 0);
+
 		for(int i=0; i<1; i++){
 			if (!useVIDEO) {
 				//String jpgFile = new String("LTGym3ft.jpg");
@@ -700,6 +700,31 @@ public class HelloOCV {
 		System.out.println("Right edge of target 2 has x = " + Double.toString(nomXTgt2R));
 		System.out.println(" ");
 
+		// At this point we can capture 6 preferred points associated with each target's horizontal line fits
+		double[] xAtYfind = new double[12];
+		double[] yAtYfind = new double[12];
+		double incrX = 0;
+		incrX = (nomXTgt1R - nomXTgt1L) / 7;
+		xAtYfind[0] = nomXTgt1L + incrX;
+		yAtYfind[0] = 0;
+		System.out.println("Find Y at X = " + xAtYfind[0]);
+		for (int zLpCtr1 = 1; zLpCtr1 < 6; zLpCtr1++) {
+			xAtYfind[zLpCtr1] = xAtYfind[zLpCtr1 - 1] + incrX;
+			yAtYfind[zLpCtr1] = 0;
+			System.out.println("Find Y at X = " + xAtYfind[zLpCtr1]);
+		}
+		
+		incrX = (nomXTgt2R - nomXTgt2L) / 7;
+		xAtYfind[6] = nomXTgt2L + incrX;
+		yAtYfind[6] = 0;
+		System.out.println("Find Y at X = " + xAtYfind[6]);
+		for (int zLpCtr1 = 7; zLpCtr1 < 12; zLpCtr1++) {
+			xAtYfind[zLpCtr1] = xAtYfind[zLpCtr1 - 1] + incrX;
+			yAtYfind[zLpCtr1] = 0;
+			System.out.println("Find Y at X = " + xAtYfind[zLpCtr1]);
+		}
+		System.out.println(" ");
+		
 		//int diffHLCount = 0;	// The count of the number of different horizontal lines in the group, hopefully 1
 		// For each of the vertical lines, assess whether it is part of the top or the bottom of one of the rectangular targets
 		for (int zLpCtr1 = 0; zLpCtr1 < ocvLineCount; zLpCtr1++) {
@@ -798,28 +823,60 @@ public class HelloOCV {
 		Imgcodecs.imwrite("RDW2619.jpg", gp.hslThresholdOutput());
 
 		// Get the accompanying horizontal lines in order to validate the height of the rectangles
+		double mSlope = 0;		// slope of the line we use to fit the top of the target
+		double yIntcpt = 0;		// y intercept for the line we use to fit to
+		Random rand = new Random();
+		System.out.println(" ");
+		// Get linefit coordinates for the top horizontal lines of target 1
 		for (int zLpCtr1 = 0; zLpCtr1 < ocvLineCount; zLpCtr1++) {
-			
+			if (edgeID[zLpCtr1] == "1HT") {
+				System.out.println("Find linefit coordinates for line " + Integer.toString(zLpCtr1));
+				mSlope = (targetLines[zLpCtr1].ocvY2 - targetLines[zLpCtr1].ocvY1) / (targetLines[zLpCtr1].ocvX2 - targetLines[zLpCtr1].ocvX1);
+				yIntcpt = targetLines[zLpCtr1].ocvY1 + mSlope * targetLines[zLpCtr1].ocvX1;
+				for (int zLpCtr2 = 0; zLpCtr2 < 6; zLpCtr2++) {
+					// Don't generate linefit points that don't reside inside the identified line 
+					if ((xAtYfind[zLpCtr2] >= targetLines[zLpCtr1].ocvX1) && (xAtYfind[zLpCtr2] <= targetLines[zLpCtr1].ocvX2)) {
+						// We introduce a probablistic approach to overwriting the result from a previous line
+						if (yAtYfind[zLpCtr2] == 0) {
+							yAtYfind[zLpCtr2] = mSlope * xAtYfind[zLpCtr2] + yIntcpt;
+							System.out.println("Fitting for x / y of " + Double.toString(xAtYfind[zLpCtr2]) + " / " + Double.toString(yAtYfind[zLpCtr2]));
+						} else if (rand.nextInt(100) > 50) {
+							yAtYfind[zLpCtr2] = mSlope * xAtYfind[zLpCtr2] + yIntcpt;
+							System.out.println("Fitting for x / y of " + Double.toString(xAtYfind[zLpCtr2]) + " / " + Double.toString(yAtYfind[zLpCtr2]));
+						}
+					}
+				}
+			} 
 		}
+		
+		// Now get linefit coordinates for the top horizontal lines of target 2
+		for (int zLpCtr1 = 0; zLpCtr1 < ocvLineCount; zLpCtr1++) {
+			if (edgeID[zLpCtr1] == "2HT") {
+				System.out.println("Find linefit coordinates for line " + Integer.toString(zLpCtr1));
+				mSlope = (targetLines[zLpCtr1].ocvY2 - targetLines[zLpCtr1].ocvY1) / (targetLines[zLpCtr1].ocvX2 - targetLines[zLpCtr1].ocvX1);
+				yIntcpt = targetLines[zLpCtr1].ocvY1 + mSlope * targetLines[zLpCtr1].ocvX1;
+				for (int zLpCtr2 = 6; zLpCtr2 < 12; zLpCtr2++) {
+					// Don't generate linefit points that don't reside inside the identified line 
+					if ((xAtYfind[zLpCtr2] >= targetLines[zLpCtr1].ocvX1) && (xAtYfind[zLpCtr2] <= targetLines[zLpCtr1].ocvX2)) {
+						// We introduce a probablistic approach to overwriting the result from a previous line
+						if (yAtYfind[zLpCtr2] == 0) {
+							yAtYfind[zLpCtr2] = mSlope * xAtYfind[zLpCtr2] + yIntcpt;
+							System.out.println("Fitting for x / y of " + Double.toString(xAtYfind[zLpCtr2]) + " / " + Double.toString(yAtYfind[zLpCtr2]));
+						} else if (rand.nextInt(100) > 50) {
+							yAtYfind[zLpCtr2] = mSlope * xAtYfind[zLpCtr2] + yIntcpt;
+							System.out.println("Fitting for x / y of " + Double.toString(xAtYfind[zLpCtr2]) + " / " + Double.toString(yAtYfind[zLpCtr2]));
+						}
+					}
+				}
+			} 
+		}
+		
+		System.out.println(" ");
 		
 		// findlines experiment focusing in particular on vertical lines
 		
 		// Houghlines (standard) experiment
 
-		// We now want to get (8) x,y pairs for each of the (8) lines, 4 horizontal and 4 vertical
-		for (int zLpCtr1 = 0; zLpCtr1 < ocvLineCount; zLpCtr1++) {
-			// First for the vertical lines
-			for (int zLpCtr2 = 0; zLpCtr2 < 4; zLpCtr2++) {
-				
-			}
-			
-			// Then for the horizontal lines
-			for (int zLpCtr2 = 0; zLpCtr2 < 4; zLpCtr2++) {
-				
-			}
-			
-		}
-		
 		// Save our line data out to a file
 
 		try {
@@ -869,6 +926,8 @@ public class HelloOCV {
 	halfFoView = 0.5 * targetWidth * pxlWidth / (nomXTgt2R - nomXTgt1L);
 	dist2Target = halfFoView / tanHlfAngle;
 	System.out.println("The estimated distance to the target (in inches) is " + Double.toString(dist2Target));
+	
+	//table2Rbt.
 	}
 }
 
