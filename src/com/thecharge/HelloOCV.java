@@ -16,13 +16,26 @@ import org.opencv.videoio.VideoCapture;
 
 import com.thecharge.GripPipelineGym.Line;
 
-import edu.wpi.first.wpilibj.networktables.NetworkTable;
+//Need to add java libraries
+//import edu.wpi.first.wpilibj.networktables.NetworkTable;
 
 public class HelloOCV {
 	private static boolean useVIDEO = false;
-
+	
+	private static long pxlWidth = 0;
+	private static long pxlHeight = 0;
+	private static int ocvLineCount = 0;
+	private static final double inchGapBetw = 6.25; // Distance between reflective targets
+	private static final double inchTgtWide = 2; // Width of the reflective target
+	private static final double inchTgtHigh = 5; // Height of the reflective target
+	private static final double inchGnd2Tgt = 10.75; // Distance from the ground to the bottom of the target
+	private static final double halfFieldAngle = 34;	// Half of the angle of view for the camera in operation
+	private static double halfFoView = 0;	// Half of the field of view in inches
+	private static final double tanHlfAngle =  Math.tan(Math.toRadians(halfFieldAngle));	// Tangent of the half angle of field of view
+	private static final double targetWidth =  inchTgtWide + inchGapBetw + inchTgtWide;	// The width of the target in inches
+	private static double dist2Target = 0;	// Calculated distance to the target in inches
+	
 	public static void main(String[] args) throws Exception {
-		// while(true);
 		System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
 		Mat image = new Mat();
 		
@@ -34,16 +47,19 @@ public class HelloOCV {
 				throw new Exception("Can't open the camera.");
 	    	}
 		}
+		
+		//Network Table Codes
 		/*
 		NetworkTable.setClientMode();
 		NetworkTable.setIPAddress("127.0.0.1");
 		NetworkTable table = NetworkTable.getTable("RobotTbl");
 		table.putNumber("Distance", 30);
 		*/
-		for(int i=0; i<1; i++){
+		
+		for (int i = 0; i < 1; i++){
 			if (!useVIDEO) {
-				//String jpgFile = new String("LTGym3ft.jpg");
-				String jpgFile = new String("LTGym6f45d.jpg");
+				String jpgFile = new String("LTGym3ft.jpg");
+				//String jpgFile = new String("LTGym6f45d.jpg");
 				//String jpgFile = new String("LTGym6f70d.jpg");
 				//String jpgFile = new String("LTGym8ft.jpg");
 				//String jpgFile = new String("LTGym18ft.jpg");  // No lines found
@@ -52,44 +68,22 @@ public class HelloOCV {
 				// Load a test image from file for development
 				image = Imgcodecs.imread(jpgFile);
 
-			} else {
+			} 
+			else
 				camera.read(image);
-			}
 			
 			// Having selected a source, process the image
 			processSingleImage(image);
 		}
-		if (useVIDEO){
+		if (useVIDEO)
 			camera.release();
-		}
 	}
 
 	private static void processSingleImage(Mat image) throws IOException, Exception {
 		// Command = noun-verb
 		// Method = verb-noun
 
-		long pxlWidth = 0;
-		long pxlHeight = 0;
-		int ocvLineCount = 0;
-		final double inchGapBetw = 6.25; // Distance between reflective targets
-		final double inchTgtWide = 2; // Width of the reflective target
-		final double inchTgtHigh = 5; // Height of the reflective target
-		final double inchGnd2Tgt = 10.75; // Distance from the ground to the
-											// bottom of the target
-		final double halfFieldAngle = 34;	// Half of the angle of view for the camera in operation
-		double halfFoView = 0;	// Half of the field of view in inches
-		double tanHlfAngle = 0;	// Tangent of the half angle of field of view
-		double targetWidth = 0;	// The width of the target in inches
-		double dist2Target = 0;	// Calculated distance to the target in inches
-		
-		targetWidth = inchTgtWide + inchGapBetw + inchTgtWide;
-		tanHlfAngle = Math.tan(Math.toRadians(halfFieldAngle));
-
-		// Capture the image dimensions
-		pxlWidth = image.width();
-		pxlHeight = image.height();
-		System.out.println("xdim = " + pxlWidth);
-		System.out.println("ydim = " + pxlHeight);
+		showImageInfo(image);
 
 		// Using the class Pipeline, instantiate here with the specified image
 		// (replicate the class here)
@@ -135,6 +129,8 @@ public class HelloOCV {
 		// Arrays.stream(targetLines).filter(line->line.isVertical()).toArray();
 
 		// Save our line data out to a file
+		
+		//TODO: Refactor
 		String LineOut;
 
 		PrintWriter outputStream = null;
@@ -155,13 +151,13 @@ public class HelloOCV {
 				outputStream.close();
 			}
 		}
-
+		
+		//TODO: Refactor
 		// Create a series of lines to overlay on the original image to assess the quality of the lines identified
 		// Note the color spec for BGR rather than RGB
 		for (int zLpCtr1 = 0; zLpCtr1 < ocvLineCount; zLpCtr1++){
 			Imgproc.line(image, targetLines[zLpCtr1].point1(), targetLines[zLpCtr1].point2(), new Scalar(0,255,255), 1);
 		}
-
 		// Save a copy of the amended file with the identified lines
 		Imgcodecs.imwrite("img_with_lines.jpg", image);
 		
@@ -869,6 +865,14 @@ public class HelloOCV {
 	halfFoView = 0.5 * targetWidth * pxlWidth / (nomXTgt2R - nomXTgt1L);
 	dist2Target = halfFoView / tanHlfAngle;
 	System.out.println("The estimated distance to the target (in inches) is " + Double.toString(dist2Target));
+	}
+
+	// Capture the image dimensions
+	private static void showImageInfo(Mat image) {
+		pxlWidth = image.width();
+		pxlHeight = image.height();
+		System.out.println("xdim = " + pxlWidth);
+		System.out.println("ydim = " + pxlHeight);
 	}
 }
 
