@@ -118,35 +118,27 @@ public class HelloOCV {
 
 		sortTargetlinesX(targetLines);
 		exportLineData(targetLines);
-		
-		//TODO: Refactor
-		// Create a series of lines to overlay on the original image to assess the quality of the lines identified
-		// Note the color spec for BGR rather than RGB
-		for (int zLpCtr1 = 0; zLpCtr1 < ocvLineCount; zLpCtr1++){
-			Imgproc.line(image, targetLines[zLpCtr1].point1(), targetLines[zLpCtr1].point2(), new Scalar(0,255,255), 1);
-		}
-		// Save a copy of the amended file with the identified lines
-		Imgcodecs.imwrite("img_with_lines.jpg", image);
+		outputOverlayedLines(image, targetLines);
 		
 		// Determine which vertical lines probably group together based on spacing from
 		// other vertical lines
 		double lastxAvg = 0;
 		double maxDiffX = 0;
 
-		for (int zLpCtr = 0; zLpCtr < ocvLineCount; zLpCtr++) {
+		for (int x = 0; x < ocvLineCount; x++) {
 			// System.out.println("Loop Count = " + Integer.toString(zLpCtr));
-			if (targetLines[zLpCtr].isVertical()) {
+			if (targetLines[x].isVertical()) {
 				// System.out.println("Boolean true for " +
 				// Integer.toString(zLpCtr));
 				if (lastxAvg > 0) {
-					xAvgDiff[zLpCtr] = targetLines[zLpCtr].xAvg - lastxAvg;
-					if (xAvgDiff[zLpCtr] > maxDiffX) {
-						maxDiffX = xAvgDiff[zLpCtr];
+					xAvgDiff[x] = targetLines[x].xAvg - lastxAvg;
+					if (xAvgDiff[x] > maxDiffX) {
+						maxDiffX = xAvgDiff[x];
 					}
-					System.out.println("Differential xAvg = " + Double.toString(xAvgDiff[zLpCtr]));
+					System.out.println("Differential xAvg = " + Double.toString(xAvgDiff[x]));
 				}
 				// Note the xAvg value of the "previous" vertical line
-				lastxAvg = targetLines[zLpCtr].xAvg;
+				lastxAvg = targetLines[x].xAvg;
 			}
 		}
 		System.out.println("The maximum differential was " + Double.toString(maxDiffX));
@@ -833,6 +825,16 @@ public class HelloOCV {
 	halfFoView = 0.5 * TARGET_WIDTH * pxlWidth / (nomXTgt2R - nomXTgt1L);
 	dist2Target = halfFoView / TAN_HALF_FIELD_ANGLE;
 	System.out.println("The estimated distance to the target (in inches) is " + Double.toString(dist2Target));
+	}
+
+	private static void outputOverlayedLines(Mat image, TargetLine[] targetLines) {
+		// Create a series of lines to overlay on the original image to assess the quality of the lines identified
+		// Note the color spec for BGR rather than RGB
+		for (int x = 0; x < ocvLineCount; x++){
+			Imgproc.line(image, targetLines[x].point1(), targetLines[x].point2(), new Scalar(0,255,255), 1);
+		}
+		// Save a copy of the amended file with the identified lines
+		Imgcodecs.imwrite("img_with_lines.jpg", image);
 	}
 
 	private static void exportLineData(TargetLine[] targetLines) throws IOException {
