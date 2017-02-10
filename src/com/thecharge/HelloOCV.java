@@ -86,7 +86,6 @@ public class HelloOCV {
 	}
 
 	private static void processSingleImage(Mat image) throws IOException, Exception {
-		showImageInfo(image);
 
 		// Using the class Pipeline, instantiate here with the specified image
 		// (replicate the class here)
@@ -96,38 +95,30 @@ public class HelloOCV {
 		// Create a List (special Java Collection) of "line" type entries from
 		// the specified image processing class
 		ArrayList<Line> lines = gp.findLinesOutput();
-		//ArrayList<Line> lines = gp.filterLinesOutput();
-		ocvLineCount = lines.size();
-		System.out.println("Number of lines = " + ocvLineCount);
-
-		System.out.println(" ");
 		
-		double[] xAvgDiff = new double[(int) ocvLineCount];
-		String[] edgeID = new String[(int) ocvLineCount];
+		ocvLineCount = lines.size();
+		showImageInfo(image);
+		
+		double[] xAvgDiff = new double[ocvLineCount];
+		String[] edgeID = new String[ocvLineCount];
 
 		// Initialize the string array
-		for (int zLpCtr1 = 0; zLpCtr1 < ocvLineCount; zLpCtr1++) {
-			edgeID[zLpCtr1] = "";
+		for (int x = 0; x < ocvLineCount; x++) {
+			edgeID[x] = "";
 		}
 
 		TargetLine[] targetLines = new TargetLine[(int) ocvLineCount];
 
 		// Create a list of line parameters that we need to sort as a group,
 		// like a row of values in a spreadsheet
-		for (int zLpCtr = 0; zLpCtr < ocvLineCount; zLpCtr++) {
-			Line currentLine = gp.findLinesOutput().get(zLpCtr);
-			targetLines[zLpCtr] = new TargetLine(currentLine);
+		for (int x = 0; x < ocvLineCount; x++) {
+			Line currentLine = gp.findLinesOutput().get(x);
+			targetLines[x] = new TargetLine(currentLine);
 		}
 
-		// Sort the lines by the average X value of the lines with targetLines
-		// as the sorted array
-		Arrays.sort(targetLines);
-		// TargetLine[] vertLines = (TargetLine[])
-		// Arrays.stream(targetLines).filter(line->line.isVertical()).toArray();
+		sortTargetlinesX(targetLines);
 
 		// Save our line data out to a file
-		
-		//TODO: Refactor
 		String LineOut;
 
 		PrintWriter outputStream = null;
@@ -864,12 +855,21 @@ public class HelloOCV {
 	System.out.println("The estimated distance to the target (in inches) is " + Double.toString(dist2Target));
 	}
 
+	private static void sortTargetlinesX(TargetLine[] targetLines) {
+		// Sort the lines by the average X value of the lines with targetLines
+		// as the sorted array
+		Arrays.sort(targetLines);
+		// TargetLine[] vertLines = (TargetLine[])
+		// Arrays.stream(targetLines).filter(line->line.isVertical()).toArray();
+	}
+
 	// Capture the image dimensions
 	private static void showImageInfo(Mat image) {
 		pxlWidth = image.width();
 		pxlHeight = image.height();
 		System.out.println("xdim = " + pxlWidth);
 		System.out.println("ydim = " + pxlHeight);
+		System.out.println("Number of lines = " + ocvLineCount + "\n");
 	}
 }
 
