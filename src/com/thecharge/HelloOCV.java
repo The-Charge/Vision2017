@@ -42,6 +42,11 @@ public class HelloOCV {
 	private static final double HI_LUM = 163.61774744027304;
 	public static double lastxAvg = 0;
 	public static double maxDiffX = 0;
+	public static int vLineSet = 0; // How many sets of vertical lines are observed
+	public static double isSameLine = 0; // Pixels between vertical lines to still consider associated
+	public static double cumulLen = 0; // Running cumulative length of the group of lines
+	public static double lastAdjVline = 0; // Position of the preceding vertical line
+	public static double firstAdjVline = 0; // Position of the first line in the grouping
 	
 	public static void main(String[] args) throws Exception {
 		System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
@@ -124,20 +129,14 @@ public class HelloOCV {
 		calcXAvgDiff(xAvgDiff, targetLines);
 		
 		// Sum the line lengths for grouped lines
-		int vLineSet = 0; // How many sets of vertical lines are observed
-		double[] ttlVLens = new double[(int) ocvLineCount]; // An array of
+
+		double[] ttlVLens = new double[ocvLineCount]; // An array of
 															// totalized line
 															// lengths, though
 															// we expect fewer
 															// entries than
 															// allocated
-		double[] nomVlineX = new double[(int) ocvLineCount]; // Nominal x coordinate of the particular vertical line
-		
-		double isSameLine = 0; // Pixels between vertical lines to still
-								// consider associated
-		double cumulLen = 0; // Running cumulative length of the group of lines
-		double lastAdjVline = 0; // Position of the preceding vertical line
-		double firstAdjVline = 0; // Position of the first line in the grouping
+		double[] nomVlineX = new double[ocvLineCount]; // Nominal x coordinate of the particular vertical line
 
 		// Use roughly +- 1/8" as the assumption that the lines represent a
 		// group, assuming that the maximum gap between lines
