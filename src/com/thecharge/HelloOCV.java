@@ -40,6 +40,8 @@ public class HelloOCV {
 	private static final double HI_SAT = 140;	//153;	// 128.80546075085323;
 	private static final double LO_LUM = 80.26079136690647;
 	private static final double HI_LUM = 163.61774744027304;
+	public static double lastxAvg = 0;
+	public static double maxDiffX = 0;
 	
 	public static void main(String[] args) throws Exception {
 		System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
@@ -119,31 +121,7 @@ public class HelloOCV {
 		sortTargetlinesX(targetLines);
 		exportLineData(targetLines);
 		outputOverlayedLines(image, targetLines);
-		
-		// Determine which vertical lines probably group together based on spacing from
-		// other vertical lines
-		double lastxAvg = 0;
-		double maxDiffX = 0;
-
-		for (int x = 0; x < ocvLineCount; x++) {
-			// System.out.println("Loop Count = " + Integer.toString(zLpCtr));
-			if (targetLines[x].isVertical()) {
-				// System.out.println("Boolean true for " +
-				// Integer.toString(zLpCtr));
-				if (lastxAvg > 0) {
-					xAvgDiff[x] = targetLines[x].xAvg - lastxAvg;
-					if (xAvgDiff[x] > maxDiffX) {
-						maxDiffX = xAvgDiff[x];
-					}
-					System.out.println("Differential xAvg = " + Double.toString(xAvgDiff[x]));
-				}
-				// Note the xAvg value of the "previous" vertical line
-				lastxAvg = targetLines[x].xAvg;
-			}
-		}
-		System.out.println("The maximum differential was " + Double.toString(maxDiffX));
-
-		System.out.println(" ");
+		calcXAvgDiff(xAvgDiff, targetLines);
 		
 		// Sum the line lengths for grouped lines
 		int vLineSet = 0; // How many sets of vertical lines are observed
@@ -825,6 +803,29 @@ public class HelloOCV {
 	halfFoView = 0.5 * TARGET_WIDTH * pxlWidth / (nomXTgt2R - nomXTgt1L);
 	dist2Target = halfFoView / TAN_HALF_FIELD_ANGLE;
 	System.out.println("The estimated distance to the target (in inches) is " + Double.toString(dist2Target));
+	}
+
+	private static void calcXAvgDiff(double[] xAvgDiff, TargetLine[] targetLines) {
+		// Determine which vertical lines probably group together based on spacing from
+		// other vertical lines
+		
+		for (int x = 0; x < ocvLineCount; x++) {
+			// System.out.println("Loop Count = " + Integer.toString(zLpCtr));
+			if (targetLines[x].isVertical()) {
+				// System.out.println("Boolean true for " +
+				// Integer.toString(zLpCtr));
+				if (lastxAvg > 0) {
+					xAvgDiff[x] = targetLines[x].xAvg - lastxAvg;
+					if (xAvgDiff[x] > maxDiffX) {
+						maxDiffX = xAvgDiff[x];
+					}
+					System.out.println("Differential xAvg = " + Double.toString(xAvgDiff[x]));
+				}
+				// Note the xAvg value of the "previous" vertical line
+				lastxAvg = targetLines[x].xAvg;
+			}
+		}
+		System.out.println("The maximum differential was " + Double.toString(maxDiffX) + "\n");
 	}
 
 	private static void outputOverlayedLines(Mat image, TargetLine[] targetLines) {
