@@ -25,15 +25,21 @@ public class HelloOCV {
 	private static long pxlWidth = 0;
 	private static long pxlHeight = 0;
 	private static int ocvLineCount = 0;
-	private static final double inchGapBetw = 6.25; // Distance between reflective targets
-	private static final double inchTgtWide = 2; // Width of the reflective target
-	private static final double inchTgtHigh = 5; // Height of the reflective target
-	private static final double inchGnd2Tgt = 10.75; // Distance from the ground to the bottom of the target
-	private static final double halfFieldAngle = 34;	// Half of the angle of view for the camera in operation
+	private static final double INCH_GAP_BETW = 6.25; // Distance between reflective targets
+	private static final double INCH_TGT_WIDE = 2; // Width of the reflective target
+	private static final double INCH_TGT_HEIGHT = 5; // Height of the reflective target
+	private static final double INCH_GND_TO_TGT = 10.75; // Distance from the ground to the bottom of the target
+	private static final double HALF_FIELD_ANGLE = 34;	// Half of the angle of view for the camera in operation
 	private static double halfFoView = 0;	// Half of the field of view in inches
-	private static final double tanHlfAngle =  Math.tan(Math.toRadians(halfFieldAngle));	// Tangent of the half angle of field of view
-	private static final double targetWidth =  inchTgtWide + inchGapBetw + inchTgtWide;	// The width of the target in inches
+	private static final double TAN_HALF_FIELD_ANGLE =  Math.tan(Math.toRadians(HALF_FIELD_ANGLE));	// Tangent of the half angle of field of view
+	private static final double TARGET_WIDTH =  INCH_TGT_WIDE + INCH_GAP_BETW + INCH_TGT_WIDE;	// The width of the target in inches
 	private static double dist2Target = 0;	// Calculated distance to the target in inches
+	private static final double LO_HUE = 74;
+	private static final double HI_HUE = 96;	// 93.99317406143345;
+	private static final double LO_SAT = 45.86330935251798;
+	private static final double HI_SAT = 140;	//153;	// 128.80546075085323;
+	private static final double LO_LUM = 80.26079136690647;
+	private static final double HI_LUM = 163.61774744027304;
 	
 	public static void main(String[] args) throws Exception {
 		System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
@@ -48,7 +54,7 @@ public class HelloOCV {
 	    	}
 		}
 		
-		//Network Table Codes
+		//Network Table Code
 		/*
 		NetworkTable.setClientMode();
 		NetworkTable.setIPAddress("127.0.0.1");
@@ -80,21 +86,12 @@ public class HelloOCV {
 	}
 
 	private static void processSingleImage(Mat image) throws IOException, Exception {
-		// Command = noun-verb
-		// Method = verb-noun
-
 		showImageInfo(image);
 
 		// Using the class Pipeline, instantiate here with the specified image
 		// (replicate the class here)
 		GripPipelineGym gp = new GripPipelineGym();
-		double loHue = 74;
-		double hiHue = 96;	// 93.99317406143345;
-		double loSat = 45.86330935251798;
-		double hiSat = 140;	//153;	// 128.80546075085323;
-		double loLum = 80.26079136690647;
-		double hiLum = 163.61774744027304;
-		gp.process(image, loHue, hiHue, loSat, hiSat, loLum, hiLum);
+		gp.process(image, LO_HUE, HI_HUE, LO_SAT, HI_SAT, LO_LUM, HI_LUM);
 
 		// Create a List (special Java Collection) of "line" type entries from
 		// the specified image processing class
@@ -205,7 +202,7 @@ public class HelloOCV {
 		// Use roughly +- 1/8" as the assumption that the lines represent a
 		// group, assuming that the maximum gap between lines
 		// corresponds with the 6.25" gap between targets.
-		isSameLine = 0.25 * maxDiffX / inchGapBetw;
+		isSameLine = 0.25 * maxDiffX / INCH_GAP_BETW;
 		if (isSameLine < 2) {
 			// It may not be reasonable to expect resolution beyond a couple of pixels
 			isSameLine = 2;
@@ -569,7 +566,7 @@ public class HelloOCV {
 		double lTgtAccrW = 0;
 		double rTgtAccrW = 0;
 		
-		refRatio = inchGapBetw / inchTgtWide;
+		refRatio = INCH_GAP_BETW / INCH_TGT_WIDE;
 		
 		boolean spacedOK = false;
 		double gap1 = 0;
@@ -862,8 +859,8 @@ public class HelloOCV {
 	}
 	
 	// Note:  This will have to be corrected as it currently assumes a 90 degree angle of incidence
-	halfFoView = 0.5 * targetWidth * pxlWidth / (nomXTgt2R - nomXTgt1L);
-	dist2Target = halfFoView / tanHlfAngle;
+	halfFoView = 0.5 * TARGET_WIDTH * pxlWidth / (nomXTgt2R - nomXTgt1L);
+	dist2Target = halfFoView / TAN_HALF_FIELD_ANGLE;
 	System.out.println("The estimated distance to the target (in inches) is " + Double.toString(dist2Target));
 	}
 
