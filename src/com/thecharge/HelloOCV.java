@@ -117,28 +117,7 @@ public class HelloOCV {
 		}
 
 		sortTargetlinesX(targetLines);
-
-		// Save our line data out to a file
-		String LineOut;
-
-		PrintWriter outputStream = null;
-		try {
-
-			outputStream = new PrintWriter(new FileWriter("srtLineOutput.txt"));
-
-			outputStream.println("AvgX,Angle,Length,X1,X2,Y1,Y2,VLenPerc,IsVert,IsHorz");
-			for (int linecount = 0; linecount < targetLines.length; linecount++) {
-				LineOut = "" + targetLines[linecount];
-
-				outputStream.println(LineOut);
-				// }
-			}
-
-		} finally {
-			if (outputStream != null) {
-				outputStream.close();
-			}
-		}
+		exportLineData(targetLines);
 		
 		//TODO: Refactor
 		// Create a series of lines to overlay on the original image to assess the quality of the lines identified
@@ -805,9 +784,10 @@ public class HelloOCV {
 		}
 		
 		// Save our line data out to a file
-
+		
+		PrintWriter outputStream = null;
 		try {
-
+			String LineOut;
 			outputStream = new PrintWriter(new FileWriter("ocvLineOutput.txt"));
 
 			outputStream.println("AvgX,Angle,Length,X1,X2,Y1,Y2,VLenPerc,IsVert,IsHorz,XAvgDiff,Bounds");
@@ -828,7 +808,7 @@ public class HelloOCV {
 
 
 	try {
-
+		String LineOut;
 		outputStream = new PrintWriter(new FileWriter("RsltLineOutput.txt"));
 
 		outputStream.println("TtlVLen,VXCoord,VYmin,VYmax,HXmin,HXmax");
@@ -853,6 +833,28 @@ public class HelloOCV {
 	halfFoView = 0.5 * TARGET_WIDTH * pxlWidth / (nomXTgt2R - nomXTgt1L);
 	dist2Target = halfFoView / TAN_HALF_FIELD_ANGLE;
 	System.out.println("The estimated distance to the target (in inches) is " + Double.toString(dist2Target));
+	}
+
+	private static void exportLineData(TargetLine[] targetLines) throws IOException {
+		// Save our line data out to a file
+		String LineOut;
+
+		PrintWriter outputStream = null;
+		try {
+
+			outputStream = new PrintWriter(new FileWriter("srtLineOutput.txt"));
+			outputStream.println("AvgX,Angle,Length,X1,X2,Y1,Y2,VLenPerc,IsVert,IsHorz");
+			for (int linecount = 0; linecount < targetLines.length; linecount++) {
+				LineOut = "" + targetLines[linecount];
+
+				outputStream.println(LineOut);
+				// }
+			}
+
+		} finally {
+			if (outputStream != null)
+				outputStream.close();
+		}
 	}
 
 	private static void sortTargetlinesX(TargetLine[] targetLines) {
