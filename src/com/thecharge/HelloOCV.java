@@ -30,23 +30,24 @@ public class HelloOCV {
 	private static final double INCH_TGT_HEIGHT = 5; // Height of the reflective target
 	private static final double INCH_GND_TO_TGT = 10.75; // Distance from the ground to the bottom of the target
 	private static final double HALF_FIELD_ANGLE = 34;	// Half of the angle of view for the camera in operation
+	private static final double INCH_IS_SAME_LINE = 0.25;
 	private static double halfFoView = 0;	// Half of the field of view in inches
 	private static final double TAN_HALF_FIELD_ANGLE =  Math.tan(Math.toRadians(HALF_FIELD_ANGLE));	// Tangent of the half angle of field of view
 	private static final double TARGET_WIDTH =  INCH_TGT_WIDE + INCH_GAP_BETW + INCH_TGT_WIDE;	// The width of the target in inches
 	private static double dist2Target = 0;	// Calculated distance to the target in inches
-	private static final double LO_HUE = 74;
-	private static final double HI_HUE = 96;	// 93.99317406143345;
-	private static final double LO_SAT = 45.86330935251798;
-	private static final double HI_SAT = 140;	//153;	// 128.80546075085323;
-	private static final double LO_LUM = 80.26079136690647;
-	private static final double HI_LUM = 163.61774744027304;
+	private static double loHue = 74;
+	private static double hiHue = 96;	// 93.99317406143345;
+	private static double loSat = 45.86330935251798;
+	private static double hiSat = 140;	//153;	// 128.80546075085323;
+	private static double loLum = 80.26079136690647;
+	private static double hiLum = 163.61774744027304;
 	public static double lastxAvg = 0;
 	public static double maxDiffX = 0;
 	public static int vLineSet = 0; // How many sets of vertical lines are observed
 	public static double isSameLine = 0; // Pixels between vertical lines to still consider associated
 	public static double cumulLen = 0; // Running cumulative length of the group of lines
-	public static double lastAdjVline = 0; // Position of the preceding vertical line
-	public static double firstAdjVline = 0; // Position of the first line in the grouping
+	public static double lastAdjVerticalline = 0; // Position of the preceding vertical line
+	public static double firstAdjVerticalline = 0; // Position of the first line in the grouping
 	
 	public static void main(String[] args) throws Exception {
 		System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
@@ -97,7 +98,7 @@ public class HelloOCV {
 		// Using the class Pipeline, instantiate here with the specified image
 		// (replicate the class here)
 		GripPipelineGym gp = new GripPipelineGym();
-		gp.process(image, LO_HUE, HI_HUE, LO_SAT, HI_SAT, LO_LUM, HI_LUM);
+		gp.process(image, loHue, hiHue, loSat, hiSat, loLum, hiLum);
 
 		// Create a List (special Java Collection) of "line" type entries from
 		// the specified image processing class
@@ -114,7 +115,7 @@ public class HelloOCV {
 			edgeID[x] = "";
 		}
 
-		TargetLine[] targetLines = new TargetLine[(int) ocvLineCount];
+		TargetLine[] targetLines = new TargetLine[ocvLineCount];
 
 		// Create a list of line parameters that we need to sort as a group,
 		// like a row of values in a spreadsheet
@@ -130,95 +131,16 @@ public class HelloOCV {
 		
 		// Sum the line lengths for grouped lines
 
-		double[] ttlVLens = new double[ocvLineCount]; // An array of
-															// totalized line
-															// lengths, though
-															// we expect fewer
-															// entries than
-															// allocated
-		double[] nomVlineX = new double[ocvLineCount]; // Nominal x coordinate of the particular vertical line
+		calcIsSameLine();
 
-		// Use roughly +- 1/8" as the assumption that the lines represent a
-		// group, assuming that the maximum gap between lines
-		// corresponds with the 6.25" gap between targets.
-		isSameLine = 0.25 * maxDiffX / INCH_GAP_BETW;
-		if (isSameLine < 2) {
-			// It may not be reasonable to expect resolution beyond a couple of pixels
-			isSameLine = 2;
-		}
+		double[] totalizedVerticalLen = new double[ocvLineCount]; // An array of totalized line lengths, though we expect fewer entries than allocated
+		double[] nominalVerticalLineX = new double[ocvLineCount]; // Nominal x coordinate of the particular vertical line
 
-		// If the first line is vertical, initialize the cumulative length to
-		// this length and note the x value
-		if (targetLines[0].isVertical()) {
-			cumulLen = targetLines[0].length;
-			lastAdjVline = targetLines[0].xAvg;
-			firstAdjVline = targetLines[0].xAvg;
-		}
-
-		// Now analyze the rest of the lines
-		for (int zLpCtr = 1; zLpCtr < ocvLineCount; zLpCtr++) {
-
-			// Note that we do nothing for non-vertical lines
-			if (xAvgDiff[zLpCtr] > isSameLine) {
-				// The line is vertical and assessed to be the first in the next group of vertical lines
-				// Capture the cumulative assessment of the line length
-				ttlVLens[vLineSet] = cumulLen;
-
-				// Reset the cumulative determination to the length of the next line
-				cumulLen = targetLines[zLpCtr].length;
-				
-				// Capture the nominal x coordinate
-				nomVlineX[vLineSet] = (lastAdjVline + firstAdjVline) / 2;
-				
-				System.out.println("This line of length " + Double.toString(ttlVLens[vLineSet]));
-				System.out.println("Its position is roughly " + Double.toString(nomVlineX[vLineSet]));
-				
-				// Capture the x coordinate for the first line in the new group
-				firstAdjVline = targetLines[zLpCtr].xAvg;
-				lastAdjVline = targetLines[zLpCtr].xAvg;
-				
-				// Increment the count of grouped lines
-				vLineSet += 1;
-				
-			} else if (targetLines[zLpCtr].isVertical()) {
-				// The line is vertical but is close enough in proximity to
-				// suggest it's the same line
-				cumulLen += targetLines[zLpCtr].length;
-				System.out.println("Expanded to " + Double.toString(cumulLen));
-				lastAdjVline = targetLines[zLpCtr].xAvg;
-				
-				// If this happens to be the very first vertical line of the set, initialize that value as well
-				if (firstAdjVline == 0) {
-					firstAdjVline = lastAdjVline;
-				}
-			}
-			// Note:  In this loop, nothing happens for lines that aren't vertical
-		}
-
-		// We may need to record the length of the last line group
-		if ((xAvgDiff[(ocvLineCount - 1)] <= isSameLine) || (!targetLines[ocvLineCount - 1].isVertical())) {
-			ttlVLens[vLineSet] = cumulLen;
-			
-			// Capture the nominal x coordinate
-			nomVlineX[vLineSet] = (lastAdjVline + firstAdjVline) / 2;
-			
-			System.out.println("The last line is of length " + Double.toString(ttlVLens[vLineSet]));
-			System.out.println("Its position is roughly " + Double.toString(nomVlineX[vLineSet]));
-		} 
-
-		// Estimate the actual length of the lines identified
-		
-		System.out.println("The number of line sets is " + Integer.toString(vLineSet + 1));
-		// What do we do if we don't find at least 4 lines
-		if (vLineSet < 3) {
-			throw new Exception("vLineSet is less than 3 (less than 4 vertical lines).");
-		}
-		
-		System.out.println(" ");
+		groupVerticalLines(xAvgDiff, targetLines, totalizedVerticalLen, nominalVerticalLineX);
 		
 		// Find the longest contiguous chain of lines for each vertical line group identified
-		double[] yminVlineEvl = new double[(int) ocvLineCount]; // Minimum y coordinate of the particular vertical line
-		double[] ymaxVlineEvl = new double[(int) ocvLineCount]; // Maximum y coordinate of the particular vertical line
+		double[] yminVlineEvl = new double[ocvLineCount]; // Minimum y coordinate of the particular vertical line
+		double[] ymaxVlineEvl = new double[ocvLineCount]; // Maximum y coordinate of the particular vertical line
 		double[] yminVlineRslt = new double[ocvLineCount]; // Minimum y coordinate of the particular vertical line set
 		double[] ymaxVlineRslt = new double[ocvLineCount]; // Maximum y coordinate of the particular vertical line set
 		double testY1 = 0;
@@ -228,13 +150,13 @@ public class HelloOCV {
 		boolean wasAppd = false;
 		
 		// For each vertical line group, find the longest contiguous series of associated segments (ideally 1 series)
-		for (int zLpCtr1 = 0; zLpCtr1 <= vLineSet; zLpCtr1++) {
-			System.out.println("Evaluating vertical line group " + Integer.toString(zLpCtr1));
+		for (int x = 0; x <= vLineSet; x++) {
+			System.out.println("Evaluating vertical line group " + Integer.toString(x));
 			diffVLCount = 0;
 			// For each original line relating to this line group, append as able
 			for (int zLpCtr2 = 0; zLpCtr2 < ocvLineCount; zLpCtr2++) {
 				if (targetLines[zLpCtr2].isVertical()) {
-					if ((targetLines[zLpCtr2].xAvg >= nomVlineX[zLpCtr1] - isSameLine) && (targetLines[zLpCtr2].xAvg <= nomVlineX[zLpCtr1] + isSameLine)) {
+					if ((targetLines[zLpCtr2].xAvg >= nominalVerticalLineX[x] - isSameLine) && (targetLines[zLpCtr2].xAvg <= nominalVerticalLineX[x] + isSameLine)) {
 						// At least for now, confirm that we're evaluating all of the appropriate vertical lines
 						System.out.println("Evaluating for grouping vertical line " + Integer.toString(zLpCtr2));
 
@@ -250,13 +172,13 @@ public class HelloOCV {
 							
 							
 						if (diffVLCount == 0) {
-							System.out.println("Initializing resulting vertical line " + Integer.toString(zLpCtr1));
+							System.out.println("Initializing resulting vertical line " + Integer.toString(x));
 							// Prepare either to compare this segment with other segments in hope of appending vertical lines...
 							yminVlineEvl[diffVLCount] = testY1;
 							ymaxVlineEvl[diffVLCount] = testY2;
 							// But capture the result in case there are no more lines to append.
-							yminVlineRslt[zLpCtr1] = testY1;	//yminVlineEvl[zLpCtr2];
-							ymaxVlineRslt[zLpCtr1] = testY2;	//ymaxVlineEvl[zLpCtr2];
+							yminVlineRslt[x] = testY1;	//yminVlineEvl[zLpCtr2];
+							ymaxVlineRslt[x] = testY2;	//ymaxVlineEvl[zLpCtr2];
 							diffVLCount ++;
 						} else {
 							// Assess whether this next segment is simply an extension of a previous segment
@@ -273,9 +195,9 @@ public class HelloOCV {
 										wasAppd = true;
 										
 										// Assess whether we now have a new longest combined line segment at this x value
-										if ((ymaxVlineEvl[zLpCtr3] - yminVlineEvl[zLpCtr3]) > (ymaxVlineRslt[zLpCtr1] - yminVlineRslt[zLpCtr1])) {
-											yminVlineRslt[zLpCtr1] = yminVlineEvl[zLpCtr3];
-											ymaxVlineRslt[zLpCtr1] = ymaxVlineEvl[zLpCtr3];
+										if ((ymaxVlineEvl[zLpCtr3] - yminVlineEvl[zLpCtr3]) > (ymaxVlineRslt[x] - yminVlineRslt[x])) {
+											yminVlineRslt[x] = yminVlineEvl[zLpCtr3];
+											ymaxVlineRslt[x] = ymaxVlineEvl[zLpCtr3];
 										}
 										
 										// Having appended the segments, evaluate the ability to append additional segments
@@ -315,12 +237,12 @@ public class HelloOCV {
 														}
 														
 														// Assess whether we now have a new longest combined line segment at this x value
-														if ((ymaxVlineEvl[zLpCtr3] - yminVlineEvl[zLpCtr3]) > (ymaxVlineRslt[zLpCtr1] - yminVlineRslt[zLpCtr1])) {
-															yminVlineRslt[zLpCtr1] = yminVlineEvl[zLpCtr3];
-															ymaxVlineRslt[zLpCtr1] = ymaxVlineEvl[zLpCtr3];
-														} else if ((ymaxVlineEvl[zLpCtr4] - yminVlineEvl[zLpCtr4]) > (ymaxVlineRslt[zLpCtr1] - yminVlineRslt[zLpCtr1])) {
-															yminVlineRslt[zLpCtr1] = yminVlineEvl[zLpCtr4];
-															ymaxVlineRslt[zLpCtr1] = ymaxVlineEvl[zLpCtr4];
+														if ((ymaxVlineEvl[zLpCtr3] - yminVlineEvl[zLpCtr3]) > (ymaxVlineRslt[x] - yminVlineRslt[x])) {
+															yminVlineRslt[x] = yminVlineEvl[zLpCtr3];
+															ymaxVlineRslt[x] = ymaxVlineEvl[zLpCtr3];
+														} else if ((ymaxVlineEvl[zLpCtr4] - yminVlineEvl[zLpCtr4]) > (ymaxVlineRslt[x] - yminVlineRslt[x])) {
+															yminVlineRslt[x] = yminVlineEvl[zLpCtr4];
+															ymaxVlineRslt[x] = ymaxVlineEvl[zLpCtr4];
 														}
 														
 													}
@@ -356,12 +278,12 @@ public class HelloOCV {
 														}
 														
 														// Assess whether we now have a new longest combined line segment at this x value
-														if ((ymaxVlineEvl[zLpCtr3] - yminVlineEvl[zLpCtr3]) > (ymaxVlineRslt[zLpCtr1] - yminVlineRslt[zLpCtr1])) {
-															yminVlineRslt[zLpCtr1] = yminVlineEvl[zLpCtr3];
-															ymaxVlineRslt[zLpCtr1] = ymaxVlineEvl[zLpCtr3];
-														} else if ((ymaxVlineEvl[zLpCtr4] - yminVlineEvl[zLpCtr4]) > (ymaxVlineRslt[zLpCtr1] - yminVlineRslt[zLpCtr1])) {
-															yminVlineRslt[zLpCtr1] = yminVlineEvl[zLpCtr4];
-															ymaxVlineRslt[zLpCtr1] = ymaxVlineEvl[zLpCtr4];
+														if ((ymaxVlineEvl[zLpCtr3] - yminVlineEvl[zLpCtr3]) > (ymaxVlineRslt[x] - yminVlineRslt[x])) {
+															yminVlineRslt[x] = yminVlineEvl[zLpCtr3];
+															ymaxVlineRslt[x] = ymaxVlineEvl[zLpCtr3];
+														} else if ((ymaxVlineEvl[zLpCtr4] - yminVlineEvl[zLpCtr4]) > (ymaxVlineRslt[x] - yminVlineRslt[x])) {
+															yminVlineRslt[x] = yminVlineEvl[zLpCtr4];
+															ymaxVlineRslt[x] = ymaxVlineEvl[zLpCtr4];
 														}
 														
 													}
@@ -381,9 +303,9 @@ public class HelloOCV {
 										wasAppd = true;
 										
 										// Assess whether we now have a new longest combined line segment at this x value
-										if ((ymaxVlineEvl[zLpCtr3] - yminVlineEvl[zLpCtr3]) > (ymaxVlineRslt[zLpCtr1] - yminVlineRslt[zLpCtr1])) {
-											yminVlineRslt[zLpCtr1] = yminVlineEvl[zLpCtr3];
-											ymaxVlineRslt[zLpCtr1] = ymaxVlineEvl[zLpCtr3];
+										if ((ymaxVlineEvl[zLpCtr3] - yminVlineEvl[zLpCtr3]) > (ymaxVlineRslt[x] - yminVlineRslt[x])) {
+											yminVlineRslt[x] = yminVlineEvl[zLpCtr3];
+											ymaxVlineRslt[x] = ymaxVlineEvl[zLpCtr3];
 										}
 																				
 										// Having appended the segments, evaluate the ability to append additional segments
@@ -423,12 +345,12 @@ public class HelloOCV {
 														}
 														
 														// Assess whether we now have a new longest combined line segment at this x value
-														if ((ymaxVlineEvl[zLpCtr3] - yminVlineEvl[zLpCtr3]) > (ymaxVlineRslt[zLpCtr1] - yminVlineRslt[zLpCtr1])) {
-															yminVlineRslt[zLpCtr1] = yminVlineEvl[zLpCtr3];
-															ymaxVlineRslt[zLpCtr1] = ymaxVlineEvl[zLpCtr3];
-														} else if ((ymaxVlineEvl[zLpCtr4] - yminVlineEvl[zLpCtr4]) > (ymaxVlineRslt[zLpCtr1] - yminVlineRslt[zLpCtr1])) {
-															yminVlineRslt[zLpCtr1] = yminVlineEvl[zLpCtr4];
-															ymaxVlineRslt[zLpCtr1] = ymaxVlineEvl[zLpCtr4];
+														if ((ymaxVlineEvl[zLpCtr3] - yminVlineEvl[zLpCtr3]) > (ymaxVlineRslt[x] - yminVlineRslt[x])) {
+															yminVlineRslt[x] = yminVlineEvl[zLpCtr3];
+															ymaxVlineRslt[x] = ymaxVlineEvl[zLpCtr3];
+														} else if ((ymaxVlineEvl[zLpCtr4] - yminVlineEvl[zLpCtr4]) > (ymaxVlineRslt[x] - yminVlineRslt[x])) {
+															yminVlineRslt[x] = yminVlineEvl[zLpCtr4];
+															ymaxVlineRslt[x] = ymaxVlineEvl[zLpCtr4];
 														}
 														
 													}
@@ -464,12 +386,12 @@ public class HelloOCV {
 														}
 														
 														// Assess whether we now have a new longest combined line segment at this x value
-														if ((ymaxVlineEvl[zLpCtr3] - yminVlineEvl[zLpCtr3]) > (ymaxVlineRslt[zLpCtr1] - yminVlineRslt[zLpCtr1])) {
-															yminVlineRslt[zLpCtr1] = yminVlineEvl[zLpCtr3];
-															ymaxVlineRslt[zLpCtr1] = ymaxVlineEvl[zLpCtr3];
-														} else if ((ymaxVlineEvl[zLpCtr4] - yminVlineEvl[zLpCtr4]) > (ymaxVlineRslt[zLpCtr1] - yminVlineRslt[zLpCtr1])) {
-															yminVlineRslt[zLpCtr1] = yminVlineEvl[zLpCtr4];
-															ymaxVlineRslt[zLpCtr1] = ymaxVlineEvl[zLpCtr4];
+														if ((ymaxVlineEvl[zLpCtr3] - yminVlineEvl[zLpCtr3]) > (ymaxVlineRslt[x] - yminVlineRslt[x])) {
+															yminVlineRslt[x] = yminVlineEvl[zLpCtr3];
+															ymaxVlineRslt[x] = ymaxVlineEvl[zLpCtr3];
+														} else if ((ymaxVlineEvl[zLpCtr4] - yminVlineEvl[zLpCtr4]) > (ymaxVlineRslt[x] - yminVlineRslt[x])) {
+															yminVlineRslt[x] = yminVlineEvl[zLpCtr4];
+															ymaxVlineRslt[x] = ymaxVlineEvl[zLpCtr4];
 														}
 														
 													}
@@ -528,13 +450,13 @@ public class HelloOCV {
 			tgt2RightXPtr = 3;
 			
 			// Now verify that we have acceptable spacing to presume these to be our targets
-			rectRatio = (nomVlineX[tgt2LeftXPtr] - nomVlineX[tgt1RightXPtr]);
-			rectRatio = rectRatio / (nomVlineX[tgt1RightXPtr] - nomVlineX[tgt1LeftXPtr]);
+			rectRatio = (nominalVerticalLineX[tgt2LeftXPtr] - nominalVerticalLineX[tgt1RightXPtr]);
+			rectRatio = rectRatio / (nominalVerticalLineX[tgt1RightXPtr] - nominalVerticalLineX[tgt1LeftXPtr]);
 			lTgtAccrW = rectRatio / refRatio;
 			System.out.println("The left target accuracy is 1 : " + Double.toString(lTgtAccrW));
 			
-			rectRatio = (nomVlineX[tgt2LeftXPtr] - nomVlineX[tgt1RightXPtr]);
-			rectRatio = rectRatio / (nomVlineX[tgt2RightXPtr] - nomVlineX[tgt2LeftXPtr]);
+			rectRatio = (nominalVerticalLineX[tgt2LeftXPtr] - nominalVerticalLineX[tgt1RightXPtr]);
+			rectRatio = rectRatio / (nominalVerticalLineX[tgt2RightXPtr] - nominalVerticalLineX[tgt2LeftXPtr]);
 			lTgtAccrW = rectRatio / refRatio;
 			System.out.println("The right target accuracy is 1 : " + Double.toString(lTgtAccrW));
 			
@@ -548,9 +470,9 @@ public class HelloOCV {
 								System.out.println("Assessing line set : " + Integer.toString(zLpCtr1) + ":" + Integer.toString(zLpCtr2) + ":" + Integer.toString(zLpCtr3) + ":" + Integer.toString(zLpCtr4));
 								spacedOK = false;
 								lineWt = 0;
-								gap1 = (nomVlineX[zLpCtr2] - nomVlineX[zLpCtr1]);
-								gap2 = (nomVlineX[zLpCtr3] - nomVlineX[zLpCtr2]);
-								gap3 = (nomVlineX[zLpCtr4] - nomVlineX[zLpCtr3]);
+								gap1 = (nominalVerticalLineX[zLpCtr2] - nominalVerticalLineX[zLpCtr1]);
+								gap2 = (nominalVerticalLineX[zLpCtr3] - nominalVerticalLineX[zLpCtr2]);
+								gap3 = (nominalVerticalLineX[zLpCtr4] - nominalVerticalLineX[zLpCtr3]);
 								System.out.println("Assessing gap of : " + Double.toString(gap1));
 								System.out.println("Assessing gap of : " + Double.toString(gap2));
 								System.out.println("Assessing gap of : " + Double.toString(gap3));
@@ -558,7 +480,7 @@ public class HelloOCV {
 									if (((gap2 / gap1) > 3) && ((gap2 / gap3) > 3)) {
 										if (((gap2 / gap1) < 10) && ((gap2 / gap3) < 10)) {
 											spacedOK = true;
-											lineWt = ttlVLens[zLpCtr1] + ttlVLens[zLpCtr2] + ttlVLens[zLpCtr3];
+											lineWt = totalizedVerticalLen[zLpCtr1] + totalizedVerticalLen[zLpCtr2] + totalizedVerticalLen[zLpCtr3];
 											if (lineWt > bestWt) {
 												bestWt = lineWt;
 												vertSel[0] = zLpCtr1;
@@ -622,13 +544,13 @@ public class HelloOCV {
 		System.out.println("The allowable error is " + Double.toString(okHLGap));
 		
 		// Note the nominal left and right target X values for each of the two targets
-		nomXTgt1L = nomVlineX[tgt1LeftXPtr];
+		nomXTgt1L = nominalVerticalLineX[tgt1LeftXPtr];
 		System.out.println("Left edge of target 1 has x = " + Double.toString(nomXTgt1L));
-		nomXTgt1R = nomVlineX[tgt1RightXPtr];
+		nomXTgt1R = nominalVerticalLineX[tgt1RightXPtr];
 		System.out.println("Right edge of target 1 has x = " + Double.toString(nomXTgt1R));
-		nomXTgt2L = nomVlineX[tgt2LeftXPtr];
+		nomXTgt2L = nominalVerticalLineX[tgt2LeftXPtr];
 		System.out.println("Left edge of target 2 has x = " + Double.toString(nomXTgt2L));
-		nomXTgt2R = nomVlineX[tgt2RightXPtr];
+		nomXTgt2R = nominalVerticalLineX[tgt2RightXPtr];
 		System.out.println("Right edge of target 2 has x = " + Double.toString(nomXTgt2R));
 		System.out.println(" ");
 
@@ -714,13 +636,13 @@ public class HelloOCV {
 				}
 			} else if (targetLines[zLpCtr1].isVertical()) {
 				// Make the vertical line associations having identified the four verticals of interest
-				if ((targetLines[zLpCtr1].xAvg < (nomVlineX[0] + isSameLine)) && (targetLines[zLpCtr1].xAvg > (nomVlineX[0] - isSameLine))) {
+				if ((targetLines[zLpCtr1].xAvg < (nominalVerticalLineX[0] + isSameLine)) && (targetLines[zLpCtr1].xAvg > (nominalVerticalLineX[0] - isSameLine))) {
 					edgeID[zLpCtr1] = "1VL";
-				} else if ((targetLines[zLpCtr1].xAvg < (nomVlineX[1] + isSameLine)) && (targetLines[zLpCtr1].xAvg > (nomVlineX[1] - isSameLine))) {
+				} else if ((targetLines[zLpCtr1].xAvg < (nominalVerticalLineX[1] + isSameLine)) && (targetLines[zLpCtr1].xAvg > (nominalVerticalLineX[1] - isSameLine))) {
 					edgeID[zLpCtr1] = "1VR";
-				} else if ((targetLines[zLpCtr1].xAvg < (nomVlineX[2] + isSameLine)) && (targetLines[zLpCtr1].xAvg > (nomVlineX[2] - isSameLine))) {
+				} else if ((targetLines[zLpCtr1].xAvg < (nominalVerticalLineX[2] + isSameLine)) && (targetLines[zLpCtr1].xAvg > (nominalVerticalLineX[2] - isSameLine))) {
 					edgeID[zLpCtr1] = "2VL";
-				} else if ((targetLines[zLpCtr1].xAvg < (nomVlineX[3] + isSameLine)) && (targetLines[zLpCtr1].xAvg > (nomVlineX[3] - isSameLine))) {
+				} else if ((targetLines[zLpCtr1].xAvg < (nominalVerticalLineX[3] + isSameLine)) && (targetLines[zLpCtr1].xAvg > (nominalVerticalLineX[3] - isSameLine))) {
 					edgeID[zLpCtr1] = "2VR";
 				}
 			}
@@ -782,8 +704,8 @@ public class HelloOCV {
 
 		outputStream.println("TtlVLen,VXCoord,VYmin,VYmax,HXmin,HXmax");
 		for (int linecount = 0; linecount <= vLineSet; linecount++) {
-			LineOut = Double.toString(ttlVLens[linecount]);
-			LineOut += "," + Double.toString(nomVlineX[linecount]);
+			LineOut = Double.toString(totalizedVerticalLen[linecount]);
+			LineOut += "," + Double.toString(nominalVerticalLineX[linecount]);
 			LineOut += "," + Double.toString(yminVlineRslt[linecount]);
 			LineOut += "," + Double.toString(ymaxVlineRslt[linecount]);
 			LineOut += "," + Double.toString(xminHlineRslt[linecount]);
@@ -802,6 +724,89 @@ public class HelloOCV {
 	halfFoView = 0.5 * TARGET_WIDTH * pxlWidth / (nomXTgt2R - nomXTgt1L);
 	dist2Target = halfFoView / TAN_HALF_FIELD_ANGLE;
 	System.out.println("The estimated distance to the target (in inches) is " + Double.toString(dist2Target));
+	}
+
+	private static void groupVerticalLines(double[] xAvgDiff, TargetLine[] targetLines, double[] totalizedVerticalLen,
+			double[] nominalVerticalLineX) throws Exception {
+		// If the first line is vertical, initialize the cumulative length to
+		// this length and note the x value
+		if (targetLines[0].isVertical()) {
+			cumulLen = targetLines[0].length;
+			lastAdjVerticalline = targetLines[0].xAvg;
+			firstAdjVerticalline = targetLines[0].xAvg;
+		}
+
+		// Now analyze the rest of the lines
+		for (int x = 1; x < ocvLineCount; x++) {
+
+			// Note that we do nothing for non-vertical lines
+			if (xAvgDiff[x] > isSameLine) {
+				// The line is vertical and assessed to be the first in the next group of vertical lines
+				// Capture the cumulative assessment of the line length
+				totalizedVerticalLen[vLineSet] = cumulLen;
+
+				// Reset the cumulative determination to the length of the next line
+				cumulLen = targetLines[x].length;
+				
+				// Capture the nominal x coordinate
+				nominalVerticalLineX[vLineSet] = (lastAdjVerticalline + firstAdjVerticalline) / 2;
+				
+				System.out.println("This line of length " + Double.toString(totalizedVerticalLen[vLineSet]));
+				System.out.println("Its position is roughly " + Double.toString(nominalVerticalLineX[vLineSet]));
+				
+				// Capture the x coordinate for the first line in the new group
+				firstAdjVerticalline = targetLines[x].xAvg;
+				lastAdjVerticalline = targetLines[x].xAvg;
+				
+				// Increment the count of grouped lines
+				vLineSet += 1;
+			} 
+			else if (targetLines[x].isVertical()) 
+			{
+				// The line is vertical but is close enough in proximity to
+				// suggest it's the same line
+				cumulLen += targetLines[x].length;
+				System.out.println("Expanded to " + Double.toString(cumulLen));
+				lastAdjVerticalline = targetLines[x].xAvg;
+				
+				// If this happens to be the very first vertical line of the set, initialize that value as well
+				if (firstAdjVerticalline == 0) {
+					firstAdjVerticalline = lastAdjVerticalline;
+				}
+			}
+			// Note:  In this loop, nothing happens for lines that aren't vertical
+		}
+
+		// We may need to record the length of the last line group
+		if ((xAvgDiff[(ocvLineCount - 1)] <= isSameLine) || (!targetLines[ocvLineCount - 1].isVertical())) {
+			totalizedVerticalLen[vLineSet] = cumulLen;
+			
+			// Capture the nominal x coordinate
+			nominalVerticalLineX[vLineSet] = (lastAdjVerticalline + firstAdjVerticalline) / 2;
+			
+			System.out.println("The last line is of length " + Double.toString(totalizedVerticalLen[vLineSet]));
+			System.out.println("Its position is roughly " + Double.toString(nominalVerticalLineX[vLineSet]));
+		} 
+
+		// Estimate the actual length of the lines identified
+		
+		System.out.println("The number of line sets is " + Integer.toString(vLineSet + 1));
+		// What do we do if we don't find at least 4 lines
+		if (vLineSet < 3) {
+			throw new Exception("vLineSet is less than 3 (less than 4 vertical lines).");
+		}
+		System.out.println();
+	}
+
+	private static void calcIsSameLine() {
+		// Use roughly +- 1/8" as the assumption that the lines represent a
+		// group, assuming that the maximum gap between lines
+		// corresponds with the 6.25" gap between targets.
+		isSameLine = INCH_IS_SAME_LINE * maxDiffX / INCH_GAP_BETW;
+		if (isSameLine < 2) {
+			// It may not be reasonable to expect resolution beyond a couple of pixels
+			isSameLine = 2;
+		}
 	}
 
 	private static void calcXAvgDiff(double[] xAvgDiff, TargetLine[] targetLines) {
