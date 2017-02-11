@@ -308,17 +308,6 @@ public class HelloOCV {
 		System.out.println("Top Left x / y of " + Double.toString(nomXTgt1L) + " / " + Double.toString(yAtXFitTL));
 		System.out.println("Top Right x / y of " + Double.toString(nomXTgt2R) + " / " + Double.toString(yAtXFitTR));
 		System.out.println(" ");
-
-
-		
-		
-		
-		
-		
-		
-		
-		
-		
 		
 		// Repeat for the "bottom" line
 		
@@ -448,14 +437,6 @@ public class HelloOCV {
 		System.out.println("Bottom Right x / y of " + Double.toString(nomXTgt2R) + " / " + Double.toString(yAtXFitBR));
 		System.out.println(" ");
 
-		
-		
-		
-		
-		
-		
-		
-		
 		// Update our picture with the new determined top line
 		Imgproc.line(image, ptTL, ptTR, new Scalar(0,0,255), 1);
 		Imgproc.line(image, ptBL, ptBR, new Scalar(0,0,255), 1);
