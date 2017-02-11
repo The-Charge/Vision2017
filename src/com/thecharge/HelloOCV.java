@@ -44,9 +44,9 @@ public class HelloOCV {
 		for(int i=0; i<1; i++){
 			if (!useVIDEO) {
 				//String jpgFile = new String("LTGym3ft.jpg");
-				//String jpgFile = new String("LTGym6f45d.jpg");
+				String jpgFile = new String("LTGym6f45d.jpg");
 				//String jpgFile = new String("LTGym6f70d.jpg");
-				String jpgFile = new String("LTGym8ft.jpg");
+				//String jpgFile = new String("LTGym8ft.jpg");
 				//String jpgFile = new String("LTGym18ft.jpg");  // No lines found
 				
 
@@ -79,7 +79,8 @@ public class HelloOCV {
 											// bottom of the target
 		final double halfFieldAngleH = 34;	// Half of the angle of view for the camera in operation
 		final double halfFieldAngleV = 21.3;	// Half of the angle of view for the camera in operation
-		double halfFoView = 0;	// Half of the field of view in inches
+		double halfFoViewH = 0;	// Half of the field of view in inches (horizontal)
+		double halfFoViewV = 0;	// Half of the field of view in inches (vertical)
 		double tanHlfAngleH = 0;	// Tangent of the half angle of field of view horizontally
 		double tanHlfAngleV = 0;	// Tangent of the half angle of field of view vertically
 		double targetWidth = 0;	// The width of the target in inches
@@ -1190,21 +1191,55 @@ public class HelloOCV {
     Point ptBR = new Point(nomXTgt2R, yAtXFitBR);
     */
 	
+	double estTgtW = 0;
+	double obsTgtW = 0;
+	double angOfIncT = 0;	// Angle that the target is rotated relative to perpendicular
+	double angOfIncR = 0;	// Angle that the target is positioned relative to the orientation of the robot
+	final double rad2degr = 57.29577951; // 360 / 2 / pi()
+	
 	if ((yAtXFitTL - yAtXFitBL) > (yAtXFitTR - yAtXFitBR)) {
-		halfFoView = 0.5 * inchTgtHigh * pxlHeight / (yAtXFitTL - yAtXFitBL);
-		dist2Target = halfFoView / tanHlfAngleV;
+		
+		// We are closer to the left edge of the target
+		halfFoViewV = 0.5 * inchTgtHigh * pxlHeight / (yAtXFitTL - yAtXFitBL);
+		dist2Target = halfFoViewV / tanHlfAngleV;
 		System.out.println("The estimated distance to the target (in inches) is " + Double.toString(dist2Target));
-
+		estTgtW = (targetWidth / inchTgtHigh) * (yAtXFitTL - yAtXFitBL);
+		
+		halfFoViewH = 0.5 * targetWidth * pxlWidth / (nomXTgt2R - nomXTgt1L);
+		// Numerator, center of target to center of view in pixels
+		angOfIncR = ((nomXTgt2R - nomXTgt1L) / 2) - (pxlWidth / 2);	
+		// Convert pixels to inches
+		angOfIncR = angOfIncR * 2 * halfFoViewH / pxlWidth;
+		// Determine the angle
+		angOfIncR = Math.atan(angOfIncR / dist2Target);
+		// Convert to degrees
+		angOfIncR = rad2degr * angOfIncR;
+		
 	} else {
-		halfFoView = 0.5 * inchTgtHigh * pxlHeight / (yAtXFitTR - yAtXFitBR);
-		dist2Target = halfFoView / tanHlfAngleV;
+		
+		// We are closer to the right edge of the target
+		halfFoViewV = 0.5 * inchTgtHigh * pxlHeight / (yAtXFitTR - yAtXFitBR);
+		dist2Target = halfFoViewV / tanHlfAngleV;
 		System.out.println("The estimated distance to the target (in inches) is " + Double.toString(dist2Target));
+		estTgtW = (targetWidth / inchTgtHigh) * (yAtXFitTR - yAtXFitBR);
 
+		halfFoViewH = 0.5 * targetWidth * pxlWidth / (nomXTgt2R - nomXTgt1L);
+		// Numerator, center of target to center of view in pixels
+		angOfIncR = ((nomXTgt2R - nomXTgt1L) / 2) - (pxlWidth / 2);	
+		// Convert pixels to inches
+		angOfIncR = angOfIncR * 2 * halfFoViewH / pxlWidth;
+		// Determine the angle
+		angOfIncR = Math.atan(angOfIncR / dist2Target);
+		// Convert to degrees
+		angOfIncR = rad2degr * angOfIncR;
+		
 	}
 	// Note:  This will have to be corrected as it currently assumes a 90 degree angle of incidence
-	halfFoView = 0.5 * targetWidth * pxlWidth / (nomXTgt2R - nomXTgt1L);
-	dist2Target = halfFoView / tanHlfAngleH;
-	System.out.println("The estimated distance to the target (in inches) is " + Double.toString(dist2Target));
+	obsTgtW = (nomXTgt2R - nomXTgt1L);
+	angOfIncT = Math.acos(obsTgtW / estTgtW) * rad2degr;
+	
+	System.out.println("The estimated angle of incidence (in degrees) for the target is " + Double.toString(angOfIncT));
+	System.out.println("The estimated angle of incidence (in degrees) for the robot is " + Double.toString(angOfIncR));
 	
 	//table2Rbt.
 	}
