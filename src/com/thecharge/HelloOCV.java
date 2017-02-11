@@ -10,6 +10,7 @@ import java.io.PrintWriter;
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
+import org.opencv.core.Point;
 import org.opencv.core.Scalar;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
@@ -832,7 +833,7 @@ public class HelloOCV {
 			if (edgeID[zLpCtr1] == "1HT") {
 				System.out.println("Find linefit coordinates for line " + Integer.toString(zLpCtr1));
 				mSlope = (targetLines[zLpCtr1].ocvY2 - targetLines[zLpCtr1].ocvY1) / (targetLines[zLpCtr1].ocvX2 - targetLines[zLpCtr1].ocvX1);
-				yIntcpt = targetLines[zLpCtr1].ocvY1 + mSlope * targetLines[zLpCtr1].ocvX1;
+				yIntcpt = targetLines[zLpCtr1].ocvY1 - mSlope * targetLines[zLpCtr1].ocvX1;
 				for (int zLpCtr2 = 0; zLpCtr2 < 6; zLpCtr2++) {
 					// Don't generate linefit points that don't reside inside the identified line 
 					if ((xAtYfind[zLpCtr2] >= targetLines[zLpCtr1].ocvX1) && (xAtYfind[zLpCtr2] <= targetLines[zLpCtr1].ocvX2)) {
@@ -854,7 +855,8 @@ public class HelloOCV {
 			if (edgeID[zLpCtr1] == "2HT") {
 				System.out.println("Find linefit coordinates for line " + Integer.toString(zLpCtr1));
 				mSlope = (targetLines[zLpCtr1].ocvY2 - targetLines[zLpCtr1].ocvY1) / (targetLines[zLpCtr1].ocvX2 - targetLines[zLpCtr1].ocvX1);
-				yIntcpt = targetLines[zLpCtr1].ocvY1 + mSlope * targetLines[zLpCtr1].ocvX1;
+				yIntcpt = targetLines[zLpCtr1].ocvY1 - mSlope * targetLines[zLpCtr1].ocvX1;
+				System.out.println("Slope and Intercept as " + Double.toString(mSlope) + " / " + Double.toString(yIntcpt));
 				for (int zLpCtr2 = 6; zLpCtr2 < 12; zLpCtr2++) {
 					// Don't generate linefit points that don't reside inside the identified line 
 					if ((xAtYfind[zLpCtr2] >= targetLines[zLpCtr1].ocvX1) && (xAtYfind[zLpCtr2] <= targetLines[zLpCtr1].ocvX2)) {
@@ -874,6 +876,52 @@ public class HelloOCV {
 		System.out.println(" ");
 		
 		// findlines experiment focusing in particular on vertical lines
+		double sumx = 0;
+		double sumx2 = 0;
+		double sumy = 0;
+		int ptCount = 0;
+		for (int zLpCtr1 = 0; zLpCtr1 < 12; zLpCtr1++) {
+			if (yAtYfind[zLpCtr1] > 0) {
+				ptCount ++;
+				sumx += xAtYfind[ptCount];
+				sumx2 += xAtYfind[ptCount] * xAtYfind[ptCount];
+				sumy += yAtYfind[ptCount];
+			}
+		}
+		
+		double xbar = sumx / ptCount;
+		double ybar = sumy / ptCount;
+		
+        // second pass: compute summary statistics
+        double xxbar = 0.0, yybar = 0.0, xybar = 0.0;
+        ptCount = 0;
+        for (int zLpCtr1 = 0; zLpCtr1 < 12; zLpCtr1++) {
+			if (yAtYfind[zLpCtr1] > 0) {
+	            ptCount++;
+	            xxbar += (xAtYfind[ptCount]) * (xAtYfind[ptCount]);
+	            yybar += (yAtYfind[ptCount]) * (yAtYfind[ptCount]);
+	            xybar += (xAtYfind[ptCount]) * (yAtYfind[ptCount]);
+			}
+        }
+        
+        // Finally, calculate the slope and y intercept of the best fit top line
+        double topSlope = 0;
+        double topIntercept = 0;
+        double yAtXFitTL = 0;
+        double yAtXFitTR = 0;
+        topSlope = (ptCount * xybar) - (sumx * sumy);
+        topSlope = topSlope / ((ptCount * xxbar) - (sumx * sumx));
+        topIntercept = (sumy - topSlope * sumx) / ptCount;
+        yAtXFitTL = topSlope * nomXTgt1L + topIntercept;
+        yAtXFitTR = topSlope * nomXTgt2R + topIntercept;
+        Point ptTL = new Point(nomXTgt1L, yAtXFitTL);
+        Point ptTR = new Point(nomXTgt2R, yAtXFitTR);
+        
+		// Update our picture with the new determined top line
+		Imgproc.line(image, ptTL, ptTR, new Scalar(0,0,255), 1);
+
+		// Save a copy of the amended file with the identified lines
+		Imgcodecs.imwrite("img_with_lines.jpg", image);
 		
 		// Houghlines (standard) experiment
 
