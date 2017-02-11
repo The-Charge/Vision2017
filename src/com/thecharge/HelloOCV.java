@@ -139,10 +139,10 @@ public class HelloOCV {
 		groupVerticalLines(xAvgDiff, targetLines, totalizedVerticalLen, nominalVerticalLineX);
 		
 		// Find the longest contiguous chain of lines for each vertical line group identified
-		double[] yminVlineEvl = new double[ocvLineCount]; // Minimum y coordinate of the particular vertical line
-		double[] ymaxVlineEvl = new double[ocvLineCount]; // Maximum y coordinate of the particular vertical line
-		double[] yminVlineRslt = new double[ocvLineCount]; // Minimum y coordinate of the particular vertical line set
-		double[] ymaxVlineRslt = new double[ocvLineCount]; // Maximum y coordinate of the particular vertical line set
+		double[] yMinVerticalLine = new double[ocvLineCount]; // Minimum y coordinate of the particular vertical line
+		double[] yMaxVerticalLine = new double[ocvLineCount]; // Maximum y coordinate of the particular vertical line
+		double[] yMinVerticalLineSet = new double[ocvLineCount]; // Minimum y coordinate of the particular vertical line set
+		double[] yMaxVerticalLineSet = new double[ocvLineCount]; // Maximum y coordinate of the particular vertical line set
 		double testY1 = 0;
 		double testY2 = 0;
 		double okVLGap = 12;
@@ -154,136 +154,136 @@ public class HelloOCV {
 			System.out.println("Evaluating vertical line group " + Integer.toString(x));
 			diffVLCount = 0;
 			// For each original line relating to this line group, append as able
-			for (int zLpCtr2 = 0; zLpCtr2 < ocvLineCount; zLpCtr2++) {
-				if (targetLines[zLpCtr2].isVertical()) {
-					if ((targetLines[zLpCtr2].xAvg >= nominalVerticalLineX[x] - isSameLine) && (targetLines[zLpCtr2].xAvg <= nominalVerticalLineX[x] + isSameLine)) {
+			for (int y = 0; y < ocvLineCount; y++) {
+				if (targetLines[y].isVertical()) {
+					if ((targetLines[y].xAvg >= nominalVerticalLineX[x] - isSameLine) && (targetLines[y].xAvg <= nominalVerticalLineX[x] + isSameLine)) {
 						// At least for now, confirm that we're evaluating all of the appropriate vertical lines
-						System.out.println("Evaluating for grouping vertical line " + Integer.toString(zLpCtr2));
+						System.out.println("Evaluating for grouping vertical line " + Integer.toString(y));
 
 						// Having found an(other) line within the line group, get the min and max and see if we can append it to one of the sets
 						// or whether we possibly have to append the set
-						if (targetLines[zLpCtr2].ocvY1 < targetLines[zLpCtr2].ocvY2) {
-							testY1 = targetLines[zLpCtr2].ocvY1;
-							testY2 = targetLines[zLpCtr2].ocvY2;
+						if (targetLines[y].ocvY1 < targetLines[y].ocvY2) {
+							testY1 = targetLines[y].ocvY1;
+							testY2 = targetLines[y].ocvY2;
 						} else {	
-							testY1 = targetLines[zLpCtr2].ocvY2;
-							testY2 = targetLines[zLpCtr2].ocvY1;
+							testY1 = targetLines[y].ocvY2;
+							testY2 = targetLines[y].ocvY1;
 						}	
 							
 							
 						if (diffVLCount == 0) {
 							System.out.println("Initializing resulting vertical line " + Integer.toString(x));
 							// Prepare either to compare this segment with other segments in hope of appending vertical lines...
-							yminVlineEvl[diffVLCount] = testY1;
-							ymaxVlineEvl[diffVLCount] = testY2;
+							yMinVerticalLine[diffVLCount] = testY1;
+							yMaxVerticalLine[diffVLCount] = testY2;
 							// But capture the result in case there are no more lines to append.
-							yminVlineRslt[x] = testY1;	//yminVlineEvl[zLpCtr2];
-							ymaxVlineRslt[x] = testY2;	//ymaxVlineEvl[zLpCtr2];
+							yMinVerticalLineSet[x] = testY1;	//yminVlineEvl[y];
+							yMaxVerticalLineSet[x] = testY2;	//ymaxVlineEvl[y];
 							diffVLCount ++;
 						} else {
 							// Assess whether this next segment is simply an extension of a previous segment
 							wasAppd = false;
-							for (int zLpCtr3 = 0; zLpCtr3 < diffVLCount; zLpCtr3++){
-								if (testY2 > ymaxVlineEvl[zLpCtr3]) {
-									if (testY1 < (ymaxVlineEvl[zLpCtr3] + okVLGap)) {
+							for (int z = 0; z < diffVLCount; z++){
+								if (testY2 > yMaxVerticalLine[z]) {
+									if (testY1 < (yMaxVerticalLine[z] + okVLGap)) {
 										// Append the two lines
-										ymaxVlineEvl[zLpCtr3] = testY2;
-										if (testY1 < yminVlineEvl[zLpCtr3]) {
+										yMaxVerticalLine[z] = testY2;
+										if (testY1 < yMinVerticalLine[z]) {
 											// While we wouldn't expect this to ever happen, prepare for the unexpected
-											yminVlineEvl[zLpCtr3] = testY1;
+											yMinVerticalLine[z] = testY1;
 										}
 										wasAppd = true;
 										
 										// Assess whether we now have a new longest combined line segment at this x value
-										if ((ymaxVlineEvl[zLpCtr3] - yminVlineEvl[zLpCtr3]) > (ymaxVlineRslt[x] - yminVlineRslt[x])) {
-											yminVlineRslt[x] = yminVlineEvl[zLpCtr3];
-											ymaxVlineRslt[x] = ymaxVlineEvl[zLpCtr3];
+										if ((yMaxVerticalLine[z] - yMinVerticalLine[z]) > (yMaxVerticalLineSet[x] - yMinVerticalLineSet[x])) {
+											yMinVerticalLineSet[x] = yMinVerticalLine[z];
+											yMaxVerticalLineSet[x] = yMaxVerticalLine[z];
 										}
 										
 										// Having appended the segments, evaluate the ability to append additional segments
 										for (int zLpCtr4 = 0; zLpCtr4 < diffVLCount; zLpCtr4++) {
-											if (zLpCtr4 != zLpCtr3) {
+											if (zLpCtr4 != z) {
 												// Possibly append this new grouped segment with other segments 
 												// before or after in the array, retaining lower array position
-												if (ymaxVlineEvl[zLpCtr4] > ymaxVlineEvl[zLpCtr3]) {
-													if ((yminVlineEvl[zLpCtr4] > (yminVlineEvl[zLpCtr3] - okVLGap)) && (yminVlineEvl[zLpCtr4] < (ymaxVlineEvl[zLpCtr3] + okVLGap))){
+												if (yMaxVerticalLine[zLpCtr4] > yMaxVerticalLine[z]) {
+													if ((yMinVerticalLine[zLpCtr4] > (yMinVerticalLine[z] - okVLGap)) && (yMinVerticalLine[zLpCtr4] < (yMaxVerticalLine[z] + okVLGap))){
 														// Append the lines
-														if (zLpCtr3 == (diffVLCount - 1)) {
+														if (z == (diffVLCount - 1)) {
 															// Update at zLpCtr4 and eliminate at zLpCtr3
-															if (yminVlineEvl[zLpCtr3] < yminVlineEvl[zLpCtr4]) {
-																yminVlineEvl[zLpCtr4] = yminVlineEvl[zLpCtr3];
+															if (yMinVerticalLine[z] < yMinVerticalLine[zLpCtr4]) {
+																yMinVerticalLine[zLpCtr4] = yMinVerticalLine[z];
 															}
 															// Leave ymaxVlineEvl[zLpCtr4] alone
-															yminVlineEvl[zLpCtr3] = 0;
-															ymaxVlineEvl[zLpCtr3] = 0;
+															yMinVerticalLine[z] = 0;
+															yMaxVerticalLine[z] = 0;
 															diffVLCount--; 
 														} else if (zLpCtr4 == (diffVLCount - 1)) {
 															// Update at zLpCtr3 and eliminate at zLpCtr4
-															ymaxVlineEvl[zLpCtr3] = ymaxVlineEvl[zLpCtr4];
-															if (yminVlineEvl[zLpCtr4] < yminVlineEvl[zLpCtr3]) {
-																yminVlineEvl[zLpCtr3] = yminVlineEvl[zLpCtr4];
+															yMaxVerticalLine[z] = yMaxVerticalLine[zLpCtr4];
+															if (yMinVerticalLine[zLpCtr4] < yMinVerticalLine[z]) {
+																yMinVerticalLine[z] = yMinVerticalLine[zLpCtr4];
 															}
-															yminVlineEvl[zLpCtr4] = 0;
-															ymaxVlineEvl[zLpCtr4] = 0;
+															yMinVerticalLine[zLpCtr4] = 0;
+															yMaxVerticalLine[zLpCtr4] = 0;
 															diffVLCount--; 
 														} else {
 															// Update at zLpCtr3 and eliminate at zLpCtr4
-															if (yminVlineEvl[zLpCtr4] < yminVlineEvl[zLpCtr3]) {
-																yminVlineEvl[zLpCtr3] = yminVlineEvl[zLpCtr4];
+															if (yMinVerticalLine[zLpCtr4] < yMinVerticalLine[z]) {
+																yMinVerticalLine[z] = yMinVerticalLine[zLpCtr4];
 															}
 															// Leave ymaxVlineEvl[zLpCtr3] alone
-															yminVlineEvl[zLpCtr4] = 0;
-															ymaxVlineEvl[zLpCtr4] = 0;
+															yMinVerticalLine[zLpCtr4] = 0;
+															yMaxVerticalLine[zLpCtr4] = 0;
 														}
 														
 														// Assess whether we now have a new longest combined line segment at this x value
-														if ((ymaxVlineEvl[zLpCtr3] - yminVlineEvl[zLpCtr3]) > (ymaxVlineRslt[x] - yminVlineRslt[x])) {
-															yminVlineRslt[x] = yminVlineEvl[zLpCtr3];
-															ymaxVlineRslt[x] = ymaxVlineEvl[zLpCtr3];
-														} else if ((ymaxVlineEvl[zLpCtr4] - yminVlineEvl[zLpCtr4]) > (ymaxVlineRslt[x] - yminVlineRslt[x])) {
-															yminVlineRslt[x] = yminVlineEvl[zLpCtr4];
-															ymaxVlineRslt[x] = ymaxVlineEvl[zLpCtr4];
+														if ((yMaxVerticalLine[z] - yMinVerticalLine[z]) > (yMaxVerticalLineSet[x] - yMinVerticalLineSet[x])) {
+															yMinVerticalLineSet[x] = yMinVerticalLine[z];
+															yMaxVerticalLineSet[x] = yMaxVerticalLine[z];
+														} else if ((yMaxVerticalLine[zLpCtr4] - yMinVerticalLine[zLpCtr4]) > (yMaxVerticalLineSet[x] - yMinVerticalLineSet[x])) {
+															yMinVerticalLineSet[x] = yMinVerticalLine[zLpCtr4];
+															yMaxVerticalLineSet[x] = yMaxVerticalLine[zLpCtr4];
 														}
 														
 													}
 												} else {
-													if ((yminVlineEvl[zLpCtr3] > (yminVlineEvl[zLpCtr4] - okVLGap)) && (yminVlineEvl[zLpCtr3] < (ymaxVlineEvl[zLpCtr4] + okVLGap))){
+													if ((yMinVerticalLine[z] > (yMinVerticalLine[zLpCtr4] - okVLGap)) && (yMinVerticalLine[z] < (yMaxVerticalLine[zLpCtr4] + okVLGap))){
 														// Append the lines
-														if (zLpCtr3 == (diffVLCount - 1)) {
+														if (z == (diffVLCount - 1)) {
 															// Update at zLpCtr4 and eliminate at zLpCtr3
-															if (yminVlineEvl[zLpCtr3] < yminVlineEvl[zLpCtr4]) {
-																yminVlineEvl[zLpCtr4] = yminVlineEvl[zLpCtr3];
+															if (yMinVerticalLine[z] < yMinVerticalLine[zLpCtr4]) {
+																yMinVerticalLine[zLpCtr4] = yMinVerticalLine[z];
 															}
 															// Leave ymaxVlineEvl[zLpCtr4] alone
-															yminVlineEvl[zLpCtr3] = 0;
-															ymaxVlineEvl[zLpCtr3] = 0;
+															yMinVerticalLine[z] = 0;
+															yMaxVerticalLine[z] = 0;
 															diffVLCount--; 
 														} else if (zLpCtr4 == (diffVLCount - 1)) {
 															// Update at zLpCtr3 and eliminate at zLpCtr4
-															ymaxVlineEvl[zLpCtr3] = ymaxVlineEvl[zLpCtr4];
-															if (yminVlineEvl[zLpCtr4] < yminVlineEvl[zLpCtr3]) {
-																yminVlineEvl[zLpCtr3] = yminVlineEvl[zLpCtr4];
+															yMaxVerticalLine[z] = yMaxVerticalLine[zLpCtr4];
+															if (yMinVerticalLine[zLpCtr4] < yMinVerticalLine[z]) {
+																yMinVerticalLine[z] = yMinVerticalLine[zLpCtr4];
 															}
-															yminVlineEvl[zLpCtr4] = 0;
-															ymaxVlineEvl[zLpCtr4] = 0;
+															yMinVerticalLine[zLpCtr4] = 0;
+															yMaxVerticalLine[zLpCtr4] = 0;
 															diffVLCount--; 
 														} else {
 															// Update at zLpCtr3 and eliminate at zLpCtr4
-															if (yminVlineEvl[zLpCtr4] < yminVlineEvl[zLpCtr3]) {
-																yminVlineEvl[zLpCtr3] = yminVlineEvl[zLpCtr4];
+															if (yMinVerticalLine[zLpCtr4] < yMinVerticalLine[z]) {
+																yMinVerticalLine[z] = yMinVerticalLine[zLpCtr4];
 															}
 															// Leave ymaxVlineEvl[zLpCtr3] alone
-															yminVlineEvl[zLpCtr4] = 0;
-															ymaxVlineEvl[zLpCtr4] = 0;
+															yMinVerticalLine[zLpCtr4] = 0;
+															yMaxVerticalLine[zLpCtr4] = 0;
 														}
 														
 														// Assess whether we now have a new longest combined line segment at this x value
-														if ((ymaxVlineEvl[zLpCtr3] - yminVlineEvl[zLpCtr3]) > (ymaxVlineRslt[x] - yminVlineRslt[x])) {
-															yminVlineRslt[x] = yminVlineEvl[zLpCtr3];
-															ymaxVlineRslt[x] = ymaxVlineEvl[zLpCtr3];
-														} else if ((ymaxVlineEvl[zLpCtr4] - yminVlineEvl[zLpCtr4]) > (ymaxVlineRslt[x] - yminVlineRslt[x])) {
-															yminVlineRslt[x] = yminVlineEvl[zLpCtr4];
-															ymaxVlineRslt[x] = ymaxVlineEvl[zLpCtr4];
+														if ((yMaxVerticalLine[z] - yMinVerticalLine[z]) > (yMaxVerticalLineSet[x] - yMinVerticalLineSet[x])) {
+															yMinVerticalLineSet[x] = yMinVerticalLine[z];
+															yMaxVerticalLineSet[x] = yMaxVerticalLine[z];
+														} else if ((yMaxVerticalLine[zLpCtr4] - yMinVerticalLine[zLpCtr4]) > (yMaxVerticalLineSet[x] - yMinVerticalLineSet[x])) {
+															yMinVerticalLineSet[x] = yMinVerticalLine[zLpCtr4];
+															yMaxVerticalLineSet[x] = yMaxVerticalLine[zLpCtr4];
 														}
 														
 													}
@@ -292,106 +292,106 @@ public class HelloOCV {
 										}
 										
 										// Exit the loop having appended the segments
-										zLpCtr3 = diffVLCount + 1;
+										z = diffVLCount + 1;
 									}
 								} else {
 									// So (testY2 <= ymaxVlineEvl[zLpCtr3])
 									// Same logic but reversing the evaluation
-									if (testY2 > (yminVlineEvl[zLpCtr3] - okVLGap)) {
+									if (testY2 > (yMinVerticalLine[z] - okVLGap)) {
 										// Append the two lines
-										yminVlineEvl[zLpCtr3] = testY1;
+										yMinVerticalLine[z] = testY1;
 										wasAppd = true;
 										
 										// Assess whether we now have a new longest combined line segment at this x value
-										if ((ymaxVlineEvl[zLpCtr3] - yminVlineEvl[zLpCtr3]) > (ymaxVlineRslt[x] - yminVlineRslt[x])) {
-											yminVlineRslt[x] = yminVlineEvl[zLpCtr3];
-											ymaxVlineRslt[x] = ymaxVlineEvl[zLpCtr3];
+										if ((yMaxVerticalLine[z] - yMinVerticalLine[z]) > (yMaxVerticalLineSet[x] - yMinVerticalLineSet[x])) {
+											yMinVerticalLineSet[x] = yMinVerticalLine[z];
+											yMaxVerticalLineSet[x] = yMaxVerticalLine[z];
 										}
 																				
 										// Having appended the segments, evaluate the ability to append additional segments
-										for (int zLpCtr4 = 0; zLpCtr4 < diffVLCount; zLpCtr4++) {
-											if (zLpCtr4 != zLpCtr3) {
+										for (int w = 0; w < diffVLCount; w++) {
+											if (w != z) {
 												// Possibly append this new grouped segment with other segments 
 												// before or after in the array, retaining lower array position
-												if (ymaxVlineEvl[zLpCtr4] > ymaxVlineEvl[zLpCtr3]) {
-													if ((yminVlineEvl[zLpCtr4] > (yminVlineEvl[zLpCtr3] - okVLGap)) && (yminVlineEvl[zLpCtr4] < (ymaxVlineEvl[zLpCtr3] + okVLGap))){
+												if (yMaxVerticalLine[w] > yMaxVerticalLine[z]) {
+													if ((yMinVerticalLine[w] > (yMinVerticalLine[z] - okVLGap)) && (yMinVerticalLine[w] < (yMaxVerticalLine[z] + okVLGap))){
 														// Append the lines
-														if (zLpCtr3 == (diffVLCount - 1)) {
+														if (z == (diffVLCount - 1)) {
 															// Update at zLpCtr4 and eliminate at zLpCtr3
-															if (yminVlineEvl[zLpCtr3] < yminVlineEvl[zLpCtr4]) {
-																yminVlineEvl[zLpCtr4] = yminVlineEvl[zLpCtr3];
+															if (yMinVerticalLine[z] < yMinVerticalLine[w]) {
+																yMinVerticalLine[w] = yMinVerticalLine[z];
 															}
 															// Leave ymaxVlineEvl[zLpCtr4] alone
-															yminVlineEvl[zLpCtr3] = 0;
-															ymaxVlineEvl[zLpCtr3] = 0;
+															yMinVerticalLine[z] = 0;
+															yMaxVerticalLine[z] = 0;
 															diffVLCount--; 
-														} else if (zLpCtr4 == (diffVLCount - 1)) {
+														} else if (w == (diffVLCount - 1)) {
 															// Update at zLpCtr3 and eliminate at zLpCtr4
-															ymaxVlineEvl[zLpCtr3] = ymaxVlineEvl[zLpCtr4];
-															if (yminVlineEvl[zLpCtr4] < yminVlineEvl[zLpCtr3]) {
-																yminVlineEvl[zLpCtr3] = yminVlineEvl[zLpCtr4];
+															yMaxVerticalLine[z] = yMaxVerticalLine[w];
+															if (yMinVerticalLine[w] < yMinVerticalLine[z]) {
+																yMinVerticalLine[z] = yMinVerticalLine[w];
 															}
-															yminVlineEvl[zLpCtr4] = 0;
-															ymaxVlineEvl[zLpCtr4] = 0;
+															yMinVerticalLine[w] = 0;
+															yMaxVerticalLine[w] = 0;
 															diffVLCount--; 
 														} else {
 															// Update at zLpCtr3 and eliminate at zLpCtr4
-															if (yminVlineEvl[zLpCtr4] < yminVlineEvl[zLpCtr3]) {
-																yminVlineEvl[zLpCtr3] = yminVlineEvl[zLpCtr4];
+															if (yMinVerticalLine[w] < yMinVerticalLine[z]) {
+																yMinVerticalLine[z] = yMinVerticalLine[w];
 															}
 															// Leave ymaxVlineEvl[zLpCtr3] alone
-															yminVlineEvl[zLpCtr4] = 0;
-															ymaxVlineEvl[zLpCtr4] = 0;
+															yMinVerticalLine[w] = 0;
+															yMaxVerticalLine[w] = 0;
 														}
 														
 														// Assess whether we now have a new longest combined line segment at this x value
-														if ((ymaxVlineEvl[zLpCtr3] - yminVlineEvl[zLpCtr3]) > (ymaxVlineRslt[x] - yminVlineRslt[x])) {
-															yminVlineRslt[x] = yminVlineEvl[zLpCtr3];
-															ymaxVlineRslt[x] = ymaxVlineEvl[zLpCtr3];
-														} else if ((ymaxVlineEvl[zLpCtr4] - yminVlineEvl[zLpCtr4]) > (ymaxVlineRslt[x] - yminVlineRslt[x])) {
-															yminVlineRslt[x] = yminVlineEvl[zLpCtr4];
-															ymaxVlineRslt[x] = ymaxVlineEvl[zLpCtr4];
+														if ((yMaxVerticalLine[z] - yMinVerticalLine[z]) > (yMaxVerticalLineSet[x] - yMinVerticalLineSet[x])) {
+															yMinVerticalLineSet[x] = yMinVerticalLine[z];
+															yMaxVerticalLineSet[x] = yMaxVerticalLine[z];
+														} else if ((yMaxVerticalLine[w] - yMinVerticalLine[w]) > (yMaxVerticalLineSet[x] - yMinVerticalLineSet[x])) {
+															yMinVerticalLineSet[x] = yMinVerticalLine[w];
+															yMaxVerticalLineSet[x] = yMaxVerticalLine[w];
 														}
 														
 													}
 												} else {
-													if ((yminVlineEvl[zLpCtr3] > (yminVlineEvl[zLpCtr4] - okVLGap)) && (yminVlineEvl[zLpCtr3] < (ymaxVlineEvl[zLpCtr4] + okVLGap))){
+													if ((yMinVerticalLine[z] > (yMinVerticalLine[w] - okVLGap)) && (yMinVerticalLine[z] < (yMaxVerticalLine[w] + okVLGap))){
 														// Append the lines
-														if (zLpCtr3 == (diffVLCount - 1)) {
+														if (z == (diffVLCount - 1)) {
 															// Update at zLpCtr4 and eliminate at zLpCtr3
-															if (yminVlineEvl[zLpCtr3] < yminVlineEvl[zLpCtr4]) {
-																yminVlineEvl[zLpCtr4] = yminVlineEvl[zLpCtr3];
+															if (yMinVerticalLine[z] < yMinVerticalLine[w]) {
+																yMinVerticalLine[w] = yMinVerticalLine[z];
 															}
 															// Leave ymaxVlineEvl[zLpCtr4] alone
-															yminVlineEvl[zLpCtr3] = 0;
-															ymaxVlineEvl[zLpCtr3] = 0;
+															yMinVerticalLine[z] = 0;
+															yMaxVerticalLine[z] = 0;
 															diffVLCount--; 
-														} else if (zLpCtr4 == (diffVLCount - 1)) {
+														} else if (w == (diffVLCount - 1)) {
 															// Update at zLpCtr3 and eliminate at zLpCtr4
-															yminVlineEvl[zLpCtr3] = yminVlineEvl[zLpCtr4];
-															if (ymaxVlineEvl[zLpCtr4] > ymaxVlineEvl[zLpCtr3]) {
-																ymaxVlineEvl[zLpCtr3] = ymaxVlineEvl[zLpCtr4];
+															yMinVerticalLine[z] = yMinVerticalLine[w];
+															if (yMaxVerticalLine[w] > yMaxVerticalLine[z]) {
+																yMaxVerticalLine[z] = yMaxVerticalLine[w];
 															}
-															yminVlineEvl[zLpCtr4] = 0;
-															ymaxVlineEvl[zLpCtr4] = 0;
+															yMinVerticalLine[w] = 0;
+															yMaxVerticalLine[w] = 0;
 															diffVLCount--; 
 														} else {
 															// Update at zLpCtr3 and eliminate at zLpCtr4
-															if (yminVlineEvl[zLpCtr4] < yminVlineEvl[zLpCtr3]) {
-																yminVlineEvl[zLpCtr3] = yminVlineEvl[zLpCtr4];
+															if (yMinVerticalLine[w] < yMinVerticalLine[z]) {
+																yMinVerticalLine[z] = yMinVerticalLine[w];
 															}
 															// Leave ymaxVlineEvl[zLpCtr3] alone
-															yminVlineEvl[zLpCtr4] = 0;
-															ymaxVlineEvl[zLpCtr4] = 0;
+															yMinVerticalLine[w] = 0;
+															yMaxVerticalLine[w] = 0;
 														}
 														
 														// Assess whether we now have a new longest combined line segment at this x value
-														if ((ymaxVlineEvl[zLpCtr3] - yminVlineEvl[zLpCtr3]) > (ymaxVlineRslt[x] - yminVlineRslt[x])) {
-															yminVlineRslt[x] = yminVlineEvl[zLpCtr3];
-															ymaxVlineRslt[x] = ymaxVlineEvl[zLpCtr3];
-														} else if ((ymaxVlineEvl[zLpCtr4] - yminVlineEvl[zLpCtr4]) > (ymaxVlineRslt[x] - yminVlineRslt[x])) {
-															yminVlineRslt[x] = yminVlineEvl[zLpCtr4];
-															ymaxVlineRslt[x] = ymaxVlineEvl[zLpCtr4];
+														if ((yMaxVerticalLine[z] - yMinVerticalLine[z]) > (yMaxVerticalLineSet[x] - yMinVerticalLineSet[x])) {
+															yMinVerticalLineSet[x] = yMinVerticalLine[z];
+															yMaxVerticalLineSet[x] = yMaxVerticalLine[z];
+														} else if ((yMaxVerticalLine[w] - yMinVerticalLine[w]) > (yMaxVerticalLineSet[x] - yMinVerticalLineSet[x])) {
+															yMinVerticalLineSet[x] = yMinVerticalLine[w];
+															yMaxVerticalLineSet[x] = yMaxVerticalLine[w];
 														}
 														
 													}
@@ -400,14 +400,14 @@ public class HelloOCV {
 										}
 										
 										// Exit the loop having appended the necessary segments together
-										zLpCtr3 = diffVLCount + 1;
+										z = diffVLCount + 1;
 									}
 								}
 							}	
 							if (!wasAppd) {
 								// Record them separately for now
-								yminVlineEvl[diffVLCount] = testY1;
-								ymaxVlineEvl[diffVLCount] = testY2;
+								yMinVerticalLine[diffVLCount] = testY1;
+								yMaxVerticalLine[diffVLCount] = testY2;
 								diffVLCount ++;
 							}
 						}
@@ -416,7 +416,7 @@ public class HelloOCV {
 			}
 		}
 		
-		System.out.println(" ");
+		System.out.println();
 		
 		int tgt1LeftXPtr = 0;
 		int tgt1RightXPtr = 0;
@@ -533,8 +533,8 @@ public class HelloOCV {
 		
  		// Note the nominal target top and bottom values (calculate a simple average from the vertical lines)
 		for (int zLpCtr1 = 0; zLpCtr1 <= vLineSet; zLpCtr1 ++) {
-			nomYTgtBtm += yminVlineRslt[zLpCtr1];
-			nomYTgtTop += ymaxVlineRslt[zLpCtr1];
+			nomYTgtBtm += yMinVerticalLineSet[zLpCtr1];
+			nomYTgtTop += yMaxVerticalLineSet[zLpCtr1];
 		}
 		nomYTgtBtm = nomYTgtBtm/(vLineSet + 1);
 		nomYTgtTop = nomYTgtTop/(vLineSet + 1);
@@ -706,8 +706,8 @@ public class HelloOCV {
 		for (int linecount = 0; linecount <= vLineSet; linecount++) {
 			LineOut = Double.toString(totalizedVerticalLen[linecount]);
 			LineOut += "," + Double.toString(nominalVerticalLineX[linecount]);
-			LineOut += "," + Double.toString(yminVlineRslt[linecount]);
-			LineOut += "," + Double.toString(ymaxVlineRslt[linecount]);
+			LineOut += "," + Double.toString(yMinVerticalLineSet[linecount]);
+			LineOut += "," + Double.toString(yMaxVerticalLineSet[linecount]);
 			LineOut += "," + Double.toString(xminHlineRslt[linecount]);
 			LineOut += "," + Double.toString(xmaxHlineRslt[linecount]);
 			outputStream.println(LineOut);
