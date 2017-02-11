@@ -44,9 +44,9 @@ public class HelloOCV {
 		for(int i=0; i<1; i++){
 			if (!useVIDEO) {
 				//String jpgFile = new String("LTGym3ft.jpg");
-				String jpgFile = new String("LTGym6f45d.jpg");
+				//String jpgFile = new String("LTGym6f45d.jpg");
 				//String jpgFile = new String("LTGym6f70d.jpg");
-				//String jpgFile = new String("LTGym8ft.jpg");
+				String jpgFile = new String("LTGym8ft.jpg");
 				//String jpgFile = new String("LTGym18ft.jpg");  // No lines found
 				
 
@@ -1207,7 +1207,7 @@ public class HelloOCV {
 		
 		halfFoViewH = 0.5 * targetWidth * pxlWidth / (nomXTgt2R - nomXTgt1L);
 		// Numerator, center of target to center of view in pixels
-		angOfIncR = ((nomXTgt2R - nomXTgt1L) / 2) - (pxlWidth / 2);	
+		angOfIncR = ((nomXTgt2R + nomXTgt1L) / 2) - (pxlWidth / 2);	
 		// Convert pixels to inches
 		angOfIncR = angOfIncR * 2 * halfFoViewH / pxlWidth;
 		// Determine the angle
@@ -1225,7 +1225,7 @@ public class HelloOCV {
 
 		halfFoViewH = 0.5 * targetWidth * pxlWidth / (nomXTgt2R - nomXTgt1L);
 		// Numerator, center of target to center of view in pixels
-		angOfIncR = ((nomXTgt2R - nomXTgt1L) / 2) - (pxlWidth / 2);	
+		angOfIncR = ((nomXTgt2R + nomXTgt1L) / 2) - (pxlWidth / 2);	
 		// Convert pixels to inches
 		angOfIncR = angOfIncR * 2 * halfFoViewH / pxlWidth;
 		// Determine the angle
