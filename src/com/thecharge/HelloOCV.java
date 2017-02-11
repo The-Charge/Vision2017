@@ -162,11 +162,8 @@ public class HelloOCV {
 		double[] xMinHorizontalLineSet = new double[ocvLineCount]; // Minimum y coordinate of the particular vertical line set
 		double[] xMaxHorizontalLineSet = new double[ocvLineCount]; // Maximum y coordinate of the particular vertical line set
 		
-		findHorizontalLines(edgeID, targetLines, nominalVerticalLineX, yMinVerticalLineSet, yMaxVerticalLineSet,
-				xMinHorizontalLine, xMaxHorizontalLine, xMinHorizontalLineSet, xMaxHorizontalLineSet);
-		
-		// Put the generated image back out to a file
-		Imgcodecs.imwrite("RDW2619.jpg", gp.hslThresholdOutput());
+		findHorizontalLines(edgeID, targetLines, nominalVerticalLineX, yMinVerticalLineSet, yMaxVerticalLineSet, xMinHorizontalLine, xMaxHorizontalLine, xMinHorizontalLineSet, xMaxHorizontalLineSet);
+		generateGripImage(gp);
 
 		// Get the accompanying horizontal lines in order to validate the height of the rectangles
 		for (int zLpCtr1 = 0; zLpCtr1 < ocvLineCount; zLpCtr1++) {
@@ -191,6 +188,22 @@ public class HelloOCV {
 			
 		}
 		
+		saveLineData(xAvgDiff, edgeID, targetLines, totalizedVerticalLen, nominalVerticalLineX, yMinVerticalLineSet, yMaxVerticalLineSet, xMinHorizontalLineSet, xMaxHorizontalLineSet);
+	
+		calcTargetDistance();
+	}
+
+	private static void calcTargetDistance() {
+		// Note:  This will have to be corrected as it currently assumes a 90 degree angle of incidence
+		halfFoView = 0.5 * TARGET_WIDTH * pxlWidth / (nomXTgt2R - nomXTgt1L);
+		dist2Target = halfFoView / TAN_HALF_FIELD_ANGLE;
+		System.out.println("The estimated distance to the target (in inches) is " + Double.toString(dist2Target));
+	}
+
+	private static void saveLineData(double[] xAvgDiff, String[] edgeID, TargetLine[] targetLines,
+			double[] totalizedVerticalLen, double[] nominalVerticalLineX, double[] yMinVerticalLineSet,
+			double[] yMaxVerticalLineSet, double[] xMinHorizontalLineSet, double[] xMaxHorizontalLineSet)
+			throws IOException {
 		// Save our line data out to a file
 		
 		PrintWriter outputStream = null;
@@ -236,11 +249,11 @@ public class HelloOCV {
 			outputStream.close();
 		}
 	}
-	
-	// Note:  This will have to be corrected as it currently assumes a 90 degree angle of incidence
-	halfFoView = 0.5 * TARGET_WIDTH * pxlWidth / (nomXTgt2R - nomXTgt1L);
-	dist2Target = halfFoView / TAN_HALF_FIELD_ANGLE;
-	System.out.println("The estimated distance to the target (in inches) is " + Double.toString(dist2Target));
+	}
+
+	private static void generateGripImage(GripPipelineGym gp) {
+		// Put the generated image back out to a file
+		Imgcodecs.imwrite("RDW2619.jpg", gp.hslThresholdOutput());
 	}
 
 	private static void findHorizontalLines(String[] edgeID, TargetLine[] targetLines, double[] nominalVerticalLineX,
