@@ -44,9 +44,9 @@ public class HelloOCV {
 		for(int i=0; i<1; i++){
 			if (!useVIDEO) {
 				//String jpgFile = new String("LTGym3ft.jpg");
-				String jpgFile = new String("LTGym6f45d.jpg");
+				//String jpgFile = new String("LTGym6f45d.jpg");
 				//String jpgFile = new String("LTGym6f70d.jpg");
-				//String jpgFile = new String("LTGym8ft.jpg");
+				String jpgFile = new String("LTGym8ft.jpg");
 				//String jpgFile = new String("LTGym18ft.jpg");  // No lines found
 				
 
@@ -77,14 +77,17 @@ public class HelloOCV {
 		final double inchTgtHigh = 5; // Height of the reflective target
 		final double inchGnd2Tgt = 10.75; // Distance from the ground to the
 											// bottom of the target
-		final double halfFieldAngle = 34;	// Half of the angle of view for the camera in operation
+		final double halfFieldAngleH = 34;	// Half of the angle of view for the camera in operation
+		final double halfFieldAngleV = 21.3;	// Half of the angle of view for the camera in operation
 		double halfFoView = 0;	// Half of the field of view in inches
-		double tanHlfAngle = 0;	// Tangent of the half angle of field of view
+		double tanHlfAngleH = 0;	// Tangent of the half angle of field of view horizontally
+		double tanHlfAngleV = 0;	// Tangent of the half angle of field of view vertically
 		double targetWidth = 0;	// The width of the target in inches
 		double dist2Target = 0;	// Calculated distance to the target in inches
 		
 		targetWidth = inchTgtWide + inchGapBetw + inchTgtWide;
-		tanHlfAngle = Math.tan(Math.toRadians(halfFieldAngle));
+		tanHlfAngleH = Math.tan(Math.toRadians(halfFieldAngleH));
+		tanHlfAngleV = Math.tan(Math.toRadians(halfFieldAngleV));
 
 		// Capture the image dimensions
 		pxlWidth = image.width();
@@ -704,6 +707,10 @@ public class HelloOCV {
 		// At this point we can capture 6 preferred points associated with each target's horizontal line fits
 		double[] xAtYfind = new double[12];
 		double[] yAtYfind = new double[12];
+		double[] y1AtYfind = new double[12];
+		double stdErr = 0;		// Relative to the upcoming linefit we want to calculate standard error for an indication of quality
+		double stdErrT = 0;
+		double stdErrB = 0;
 		double incrX = 0;
 		incrX = (nomXTgt1R - nomXTgt1L) / 7;
 		xAtYfind[0] = nomXTgt1L + incrX;
@@ -726,8 +733,7 @@ public class HelloOCV {
 		}
 		System.out.println(" ");
 		
-		//int diffHLCount = 0;	// The count of the number of different horizontal lines in the group, hopefully 1
-		// For each of the vertical lines, assess whether it is part of the top or the bottom of one of the rectangular targets
+		// For each of the horizontal lines, assess whether it is part of the top or the bottom of one of the rectangular targets
 		for (int zLpCtr1 = 0; zLpCtr1 < ocvLineCount; zLpCtr1++) {
 			// No processing required for lines that aren't horizontal
 			if (targetLines[zLpCtr1].isHorizontal()) {
@@ -823,20 +829,22 @@ public class HelloOCV {
 		// Put the generated image back out to a file
 		Imgcodecs.imwrite("RDW2619.jpg", gp.hslThresholdOutput());
 
+		
+		
+		
+		
+		
+		
+		
+		
+		
 		// Get the accompanying horizontal lines in order to validate the height of the rectangles
 		double mSlope = 0;		// slope of the line we use to fit the top of the target
 		double yIntcpt = 0;		// y intercept for the line we use to fit to
 		Random rand = new Random();
 		System.out.println(" ");
 		
-		
-		
-		
-		
-		
-		
-		
-		// Get linefit coordinates for the top horizontal lines of target 1
+		// Get linefit coordinates for the "top" horizontal lines of target 1
 		for (int zLpCtr1 = 0; zLpCtr1 < ocvLineCount; zLpCtr1++) {
 			if (edgeID[zLpCtr1] == "1HT") {
 				System.out.println("Find linefit coordinates for line " + Integer.toString(zLpCtr1));
@@ -931,9 +939,21 @@ public class HelloOCV {
         double topIntercept = 0;
         double yAtXFitTL = 0;
         double yAtXFitTR = 0;
+        double yFit = 0;
         topSlope = (ptCount * xybar) - (sumx * sumy);
         topSlope = topSlope / ((ptCount * xxbar) - (sumx * sumx));
         topIntercept = (ybar - topSlope * xbar);
+        
+        // At least while we want quality estimates, calculate error data from the linefit
+        for (int i = 0; i < 12; i++) {
+        	if (yAtYfind[i] > 0) {
+        		yFit = topSlope * xAtYfind[i] + topIntercept;
+        		y1AtYfind[i] += yFit - yAtYfind[i];
+        		stdErrT = y1AtYfind[i] / ptCount;	// This will only be "correct" at the last point
+        	}
+        }
+        stdErr = Math.sqrt(stdErrT);
+        
 		System.out.println("Determined slope / intercept of " + Double.toString(topSlope) + " / " + Double.toString(topIntercept));
         yAtXFitTL = topSlope * nomXTgt1L + topIntercept;
         yAtXFitTR = topSlope * nomXTgt2R + topIntercept;
@@ -957,6 +977,7 @@ public class HelloOCV {
 		// Clear out the previous y values from the top line analysis (note that we reuse the x values)
 		for (int i = 0; i < 12; i++) {
 			yAtYfind[i] = 0;
+			y1AtYfind[i] = 0;
 		}
 		
 		// Get linefit coordinates for the "bottom" horizontal lines of target 1
@@ -1050,7 +1071,7 @@ public class HelloOCV {
 			}
         }
         
-        // Finally, calculate the slope and y intercept of the best fit top line
+        // Finally, calculate the slope and y intercept of the best fit "bottom" line
         double bottomSlope = 0;
         double bottomIntercept = 0;
         double yAtXFitBL = 0;
@@ -1058,6 +1079,17 @@ public class HelloOCV {
         bottomSlope = (ptCount * xybar) - (sumx * sumy);					// Numerator
         bottomSlope = bottomSlope / ((ptCount * xxbar) - (sumx * sumx));	// Numerator / Denominator
         bottomIntercept = (ybar - bottomSlope * xbar);
+
+        // At least while we want quality estimates, calculate error data from the linefit
+        for (int i = 0; i < 12; i++) {
+        	if (yAtYfind[i] > 0) {
+        		yFit = bottomSlope * xAtYfind[i] + bottomIntercept;
+        		y1AtYfind[i] += yFit - yAtYfind[i];
+        		stdErrB = y1AtYfind[i] / ptCount;	// This will only be "correct" at the last point
+        	}
+        }
+        stdErr += Math.sqrt(stdErrB);
+        
 		System.out.println("Determined slope / intercept of " + Double.toString(bottomSlope) + " / " + Double.toString(bottomIntercept));
         yAtXFitBL = bottomSlope * nomXTgt1L + bottomIntercept;
         yAtXFitBR = bottomSlope * nomXTgt2R + bottomIntercept;
@@ -1150,10 +1182,28 @@ public class HelloOCV {
 		}
 	}
 	
+	
+	/*
+    Point ptTL = new Point(nomXTgt1L, yAtXFitTL);
+    Point ptTR = new Point(nomXTgt2R, yAtXFitTR);
+    Point ptBL = new Point(nomXTgt1L, yAtXFitBL);
+    Point ptBR = new Point(nomXTgt2R, yAtXFitBR);
+    */
+	
+	if ((yAtXFitTL - yAtXFitBL) > (yAtXFitTR - yAtXFitBR)) {
+		halfFoView = 0.5 * inchTgtHigh * pxlHeight / (yAtXFitTL - yAtXFitBL);
+		dist2Target = halfFoView / tanHlfAngleV;
+		System.out.println("The estimated distance to the target (in inches) is " + Double.toString(dist2Target));
+
+	} else {
+		halfFoView = 0.5 * inchTgtHigh * pxlHeight / (yAtXFitTR - yAtXFitBR);
+		dist2Target = halfFoView / tanHlfAngleV;
+		System.out.println("The estimated distance to the target (in inches) is " + Double.toString(dist2Target));
+
+	}
 	// Note:  This will have to be corrected as it currently assumes a 90 degree angle of incidence
 	halfFoView = 0.5 * targetWidth * pxlWidth / (nomXTgt2R - nomXTgt1L);
-	//halfFoView = 0.5 * targetHeight * pxlHeight / (nomXTgt2R - nomXTgt1L);
-	dist2Target = halfFoView / tanHlfAngle;
+	dist2Target = halfFoView / tanHlfAngleH;
 	System.out.println("The estimated distance to the target (in inches) is " + Double.toString(dist2Target));
 	
 	//table2Rbt.
