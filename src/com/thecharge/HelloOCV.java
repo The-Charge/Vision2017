@@ -77,6 +77,15 @@ public class HelloOCV {
 	private static double obsTgtW = 0;
 	private static double angOfIncT = 0;	// Angle that the target is rotated relative to perpendicular
 	private static double angOfIncR = 0;	// Angle that the target is positioned relative to the orientation of the robot
+	private static double topSlope = 0;
+	private static double topIntercept = 0;
+	private static double yAtXFitTL = 0;
+	private static double yAtXFitTR = 0;
+	private static double yFit = 0;
+	private static double bottomSlope = 0;
+	private static double bottomIntercept = 0;
+	private static double yAtXFitBL = 0;
+	private static double yAtXFitBR = 0;
 	
 	
 	
@@ -184,7 +193,82 @@ public class HelloOCV {
 		
 		findHorizontalLines(edgeID, targetLines, nominalVerticalLineX, yMinVerticalLineSet, yMaxVerticalLineSet, xMinHorizontalLine, xMaxHorizontalLine, xMinHorizontalLineSet, xMaxHorizontalLineSet);
 		generateGripImage(gp);
+		findLineFit(image, edgeID, targetLines);
+		saveLineData(xAvgDiff, edgeID, targetLines, totalizedVerticalLen, nominalVerticalLineX, yMinVerticalLineSet, yMaxVerticalLineSet, xMinHorizontalLineSet, xMaxHorizontalLineSet);
+		printLineFit();
+		calcAngOfIncR();
+		calcTargetDistance();
+	}
+
+	private static void calcAngOfIncR() {
+		/*
+	    Point ptTL = new Point(nomXTgt1L, yAtXFitTL);
+	    Point ptTR = new Point(nomXTgt2R, yAtXFitTR);
+	    Point ptBL = new Point(nomXTgt1L, yAtXFitBL);
+	    Point ptBR = new Point(nomXTgt2R, yAtXFitBR);
+	    */
 		
+		if ((yAtXFitTL - yAtXFitBL) > (yAtXFitTR - yAtXFitBR)) {
+			
+			// We are closer to the left edge of the target
+			halfFoViewV = 0.5 * INCH_TGT_HEIGHT * pxlHeight / (yAtXFitTL - yAtXFitBL);
+			dist2Target = halfFoViewV / tanHlfAngleV;
+			System.out.println("The estimated distance to the target (in inches) is " + Double.toString(dist2Target));
+			estTgtW = (INCH_TGT_WIDE / INCH_TGT_HEIGHT) * (yAtXFitTL - yAtXFitBL);
+			
+			halfFoViewH = 0.5 * INCH_TGT_WIDE * pxlWidth / (nomXTgt2R - nomXTgt1L);
+			// Numerator, center of target to center of view in pixels
+			angOfIncR = ((nomXTgt2R + nomXTgt1L) / 2) - (pxlWidth / 2);	
+			// Convert pixels to inches
+			angOfIncR = angOfIncR * 2 * halfFoViewH / pxlWidth;
+			// Determine the angle
+			angOfIncR = Math.atan(angOfIncR / dist2Target);
+			// Convert to degrees
+			angOfIncR = RAD_TO_DEG * angOfIncR;
+			
+		} else {
+			
+			// We are closer to the right edge of the target
+			halfFoViewV = 0.5 * INCH_TGT_HEIGHT * pxlHeight / (yAtXFitTR - yAtXFitBR);
+			dist2Target = halfFoViewV / tanHlfAngleV;
+			System.out.println("The estimated distance to the target (in inches) is " + Double.toString(dist2Target));
+			estTgtW = (INCH_TGT_WIDE / INCH_TGT_HEIGHT) * (yAtXFitTR - yAtXFitBR);
+
+			halfFoViewH = 0.5 * INCH_TGT_WIDE * pxlWidth / (nomXTgt2R - nomXTgt1L);
+			// Numerator, center of target to center of view in pixels
+			angOfIncR = ((nomXTgt2R + nomXTgt1L) / 2) - (pxlWidth / 2);	
+			// Convert pixels to inches
+			angOfIncR = angOfIncR * 2 * halfFoViewH / pxlWidth;
+			// Determine the angle
+			angOfIncR = Math.atan(angOfIncR / dist2Target);
+			// Convert to degrees
+			angOfIncR = RAD_TO_DEG * angOfIncR;
+			
+		}
+	}
+
+	private static void printLineFit() throws IOException {
+		PrintWriter outputStream = null;
+		try {
+			
+			String LineOut;
+			outputStream = new PrintWriter(new FileWriter("XYLineFit.txt"));
+
+			outputStream.println("xValue,yValue");
+			for (int i = 0; i <= 11; i++) {
+				LineOut = Double.toString(xAtYfind[i])  + "," + Double.toString(yAtYfind[i]);
+				outputStream.println(LineOut);
+				// }
+			}
+
+		} finally {
+			if (outputStream != null) {
+				outputStream.close();
+			}
+		}
+	}
+
+	private static void findLineFit(Mat image, String[] edgeID, TargetLine[] targetLines) {
 		// Get the accompanying horizontal lines in order to validate the height of the rectangles
 		double mSlope = 0;		// slope of the line we use to fit the top of the target
 		double yIntcpt = 0;		// y intercept for the line we use to fit to
@@ -283,11 +367,6 @@ public class HelloOCV {
         }
         
         // Finally, calculate the slope and y intercept of the best fit top line
-        double topSlope = 0;
-        double topIntercept = 0;
-        double yAtXFitTL = 0;
-        double yAtXFitTR = 0;
-        double yFit = 0;
         topSlope = (ptCount * xybar) - (sumx * sumy);
         topSlope = topSlope / ((ptCount * xxbar) - (sumx * sumx));
         topIntercept = (ybar - topSlope * xbar);
@@ -408,10 +487,6 @@ public class HelloOCV {
         }
         
         // Finally, calculate the slope and y intercept of the best fit "bottom" line
-        double bottomSlope = 0;
-        double bottomIntercept = 0;
-        double yAtXFitBL = 0;
-        double yAtXFitBR = 0;
         bottomSlope = (ptCount * xybar) - (sumx * sumy);					// Numerator
         bottomSlope = bottomSlope / ((ptCount * xxbar) - (sumx * sumx));	// Numerator / Denominator
         bottomIntercept = (ybar - bottomSlope * xbar);
@@ -445,76 +520,6 @@ public class HelloOCV {
 
 		// Save a copy of the amended file with the identified lines
 		Imgcodecs.imwrite("img_with_lines.jpg", image);
-		
-		// Houghlines (standard) experiment
-		
-		saveLineData(xAvgDiff, edgeID, targetLines, totalizedVerticalLen, nominalVerticalLineX, yMinVerticalLineSet, yMaxVerticalLineSet, xMinHorizontalLineSet, xMaxHorizontalLineSet);
-		PrintWriter outputStream = null;
-		try {
-			
-			String LineOut;
-			outputStream = new PrintWriter(new FileWriter("XYLineFit.txt"));
-
-			outputStream.println("xValue,yValue");
-			for (int i = 0; i <= 11; i++) {
-				LineOut = Double.toString(xAtYfind[i])  + "," + Double.toString(yAtYfind[i]);
-				outputStream.println(LineOut);
-				// }
-			}
-
-		} finally {
-			if (outputStream != null) {
-				outputStream.close();
-			}
-		}
-		
-		
-		/*
-	    Point ptTL = new Point(nomXTgt1L, yAtXFitTL);
-	    Point ptTR = new Point(nomXTgt2R, yAtXFitTR);
-	    Point ptBL = new Point(nomXTgt1L, yAtXFitBL);
-	    Point ptBR = new Point(nomXTgt2R, yAtXFitBR);
-	    */
-		
-		if ((yAtXFitTL - yAtXFitBL) > (yAtXFitTR - yAtXFitBR)) {
-			
-			// We are closer to the left edge of the target
-			halfFoViewV = 0.5 * INCH_TGT_HEIGHT * pxlHeight / (yAtXFitTL - yAtXFitBL);
-			dist2Target = halfFoViewV / tanHlfAngleV;
-			System.out.println("The estimated distance to the target (in inches) is " + Double.toString(dist2Target));
-			estTgtW = (INCH_TGT_WIDE / INCH_TGT_HEIGHT) * (yAtXFitTL - yAtXFitBL);
-			
-			halfFoViewH = 0.5 * INCH_TGT_WIDE * pxlWidth / (nomXTgt2R - nomXTgt1L);
-			// Numerator, center of target to center of view in pixels
-			angOfIncR = ((nomXTgt2R + nomXTgt1L) / 2) - (pxlWidth / 2);	
-			// Convert pixels to inches
-			angOfIncR = angOfIncR * 2 * halfFoViewH / pxlWidth;
-			// Determine the angle
-			angOfIncR = Math.atan(angOfIncR / dist2Target);
-			// Convert to degrees
-			angOfIncR = RAD_TO_DEG * angOfIncR;
-			
-		} else {
-			
-			// We are closer to the right edge of the target
-			halfFoViewV = 0.5 * INCH_TGT_HEIGHT * pxlHeight / (yAtXFitTR - yAtXFitBR);
-			dist2Target = halfFoViewV / tanHlfAngleV;
-			System.out.println("The estimated distance to the target (in inches) is " + Double.toString(dist2Target));
-			estTgtW = (INCH_TGT_WIDE / INCH_TGT_HEIGHT) * (yAtXFitTR - yAtXFitBR);
-
-			halfFoViewH = 0.5 * INCH_TGT_WIDE * pxlWidth / (nomXTgt2R - nomXTgt1L);
-			// Numerator, center of target to center of view in pixels
-			angOfIncR = ((nomXTgt2R + nomXTgt1L) / 2) - (pxlWidth / 2);	
-			// Convert pixels to inches
-			angOfIncR = angOfIncR * 2 * halfFoViewH / pxlWidth;
-			// Determine the angle
-			angOfIncR = Math.atan(angOfIncR / dist2Target);
-			// Convert to degrees
-			angOfIncR = RAD_TO_DEG * angOfIncR;
-			
-		}
-		
-		calcTargetDistance();
 	}
 
 	private static void calcTargetDistance() {
