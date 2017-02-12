@@ -41,11 +41,19 @@ public class HelloOCV {
 	private static int tgt2RightXPtr = 0;
 	private static int vLineSet = 0; // How many sets of vertical lines are observed
 	private static int tgt1LeftXPtr = 0;
+	private static int calibrPass = 0;
+	private static boolean doCalibrate = false;
 	private static double halfFoViewH = 0;
 	private static double halfFoViewV = 0;
 	private static double tanHlfAngleH = Math.tan(Math.toRadians(HALF_FIELD_ANGLE_H));
 	private static double tanHlfAngleV = Math.tan(Math.toRadians(HALF_FIELD_ANGLE_V));
 	private static double dist2Target = 0;	// Calculated distance to the target in inches
+	private static final double INITIAL_LO_HUE = 74;
+	private static final double INITIAL_HI_HUE = 96;	// 93.99317406143345;
+	private static final double iloSat = 45.86330935251798;
+	private static final double ihiSat = 140;	//153;	// 128.80546075085323;
+	private static final double iloLum = 80.26079136690647;
+	private static final double ihiLum = 163.61774744027304;
 	private static double loHue = 74;
 	private static double hiHue = 96;	// 93.99317406143345;
 	private static double loSat = 45.86330935251798;
@@ -86,7 +94,13 @@ public class HelloOCV {
 	private static double bottomIntercept = 0;
 	private static double yAtXFitBL = 0;
 	private static double yAtXFitBR = 0;
-	
+	private static double optLoHue = 0;		// These are the determined optimal values during calibration
+	private static double optHiHue = 0;
+	private static double optLoSat = 0;
+	private static double optHiSat = 0;
+	private static double optLoLum = 0;
+	private static double optHiLum = 0;
+	private static String jpgFile = "";
 	
 	
 	public static void main(String[] args) throws Exception {
@@ -261,15 +275,35 @@ public class HelloOCV {
 
 	private static void selectNextParameterSet() {
 		
-		String jpgFile = new String("LTGym3ft.jpg");
+		jpgFile = new String("LTGym3ft.jpg");
 		//String jpgFile = new String("LTGym6f45d.jpg");
 		//String jpgFile = new String("LTGym6f70d.jpg");
 		//String jpgFile = new String("LTGym8ft.jpg");
 		//String jpgFile = new String("LTGym18ft.jpg");  // No lines found
+		//private static int calibrPass = 0;
+		//private static boolean doCalibrate = false;
+		
 
 		// The first pass (analysisPassCount = 0), create a set of tests but take the use the defined initial set
+		if (doCalibrate) {
+			if (calibrPass == 0) {
+				loHue = INITIAL_LO_HUE;
+				hiHue = INITIAL_HI_HUE;
+				loSat = iloSat;
+				hiSat = ihiSat;
+				loLum = iloLum;
+				hiLum = ihiLum;
+			}
+			// For all subsequent passes, instantiate the next set in the series
+		} else {
+			loHue = INITIAL_LO_HUE;
+			hiHue = INITIAL_HI_HUE;
+			loSat = iloSat;
+			hiSat = ihiSat;
+			loLum = iloLum;
+			hiLum = ihiLum;			
+		}
 		
-		// For all subsequent passes, instantiate the next set in the series
 		
 		// This class needs to interact closely with recordAnalysisResults to assess whether the last test was better or worse
 		
@@ -386,7 +420,7 @@ public class HelloOCV {
         for (int i = 0; i < 12; i++) {
         	if (yAtYfind[i] > 0) {
         		yFit = topSlope * xAtYfind[i] + topIntercept;
-        		y1AtYfind[i] += yFit - yAtYfind[i];
+        		y1AtYfind[i] += (yFit - yAtYfind[i]) * (yFit - yAtYfind[i]);
         		stdErrT = y1AtYfind[i] / ptCount;	// This will only be "correct" at the last point
         	}
         }
@@ -506,7 +540,7 @@ public class HelloOCV {
         for (int i = 0; i < 12; i++) {
         	if (yAtYfind[i] > 0) {
         		yFit = bottomSlope * xAtYfind[i] + bottomIntercept;
-        		y1AtYfind[i] += yFit - yAtYfind[i];
+        		y1AtYfind[i] += (yFit - yAtYfind[i]) * (yFit - yAtYfind[i]);
         		stdErrB = y1AtYfind[i] / ptCount;	// This will only be "correct" at the last point
         	}
         }
