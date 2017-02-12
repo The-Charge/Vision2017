@@ -214,7 +214,7 @@ public class HelloOCV {
 			halfFoViewV = 0.5 * INCH_TGT_HEIGHT * pxlHeight / (yAtXFitTL - yAtXFitBL);
 			dist2Target = halfFoViewV / tanHlfAngleV;
 			System.out.println("The estimated distance to the target (in inches) is " + Double.toString(dist2Target));
-			estTgtW = (INCH_TGT_WIDE / INCH_TGT_HEIGHT) * (yAtXFitTL - yAtXFitBL);
+			estTgtW = (TARGET_WIDTH / INCH_TGT_HEIGHT) * (yAtXFitTL - yAtXFitBL);
 			
 			halfFoViewH = 0.5 * INCH_TGT_WIDE * pxlWidth / (nomXTgt2R - nomXTgt1L);
 			// Numerator, center of target to center of view in pixels
@@ -232,7 +232,7 @@ public class HelloOCV {
 			halfFoViewV = 0.5 * INCH_TGT_HEIGHT * pxlHeight / (yAtXFitTR - yAtXFitBR);
 			dist2Target = halfFoViewV / tanHlfAngleV;
 			System.out.println("The estimated distance to the target (in inches) is " + Double.toString(dist2Target));
-			estTgtW = (INCH_TGT_WIDE / INCH_TGT_HEIGHT) * (yAtXFitTR - yAtXFitBR);
+			estTgtW = (TARGET_WIDTH / INCH_TGT_HEIGHT) * (yAtXFitTR - yAtXFitBR);
 
 			halfFoViewH = 0.5 * INCH_TGT_WIDE * pxlWidth / (nomXTgt2R - nomXTgt1L);
 			// Numerator, center of target to center of view in pixels
