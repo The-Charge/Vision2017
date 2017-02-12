@@ -110,13 +110,10 @@ public class HelloOCV {
 		
 		for (int i = 0; i < 1; i++){
 			if (!useVIDEO) {
-				String jpgFile = new String("LTGym3ft.jpg");
-				//String jpgFile = new String("LTGym6f45d.jpg");
-				//String jpgFile = new String("LTGym6f70d.jpg");
-				//String jpgFile = new String("LTGym8ft.jpg");
-				//String jpgFile = new String("LTGym18ft.jpg");  // No lines found
 				
-
+				// While normally not executed, here's where we choose alternate hue / saturation / luminance values for analysis
+				selectNextParameterSet();
+				
 				// Load a test image from file for development
 				image = Imgcodecs.imread(jpgFile);
 
@@ -198,6 +195,9 @@ public class HelloOCV {
 		printLineFit();
 		calcAngOfIncR();
 		calcTargetDistance();
+		
+		// For the case where we want to analyze a series of tuning choices, record the results to a file
+		recordAnalysisResults();
 	}
 
 	private static void calcAngOfIncR() {
@@ -216,35 +216,26 @@ public class HelloOCV {
 			System.out.println("The estimated distance to the target (in inches) is " + Double.toString(dist2Target));
 			estTgtW = (TARGET_WIDTH / INCH_TGT_HEIGHT) * (yAtXFitTL - yAtXFitBL);
 			
-			halfFoViewH = 0.5 * INCH_TGT_WIDE * pxlWidth / (nomXTgt2R - nomXTgt1L);
-			// Numerator, center of target to center of view in pixels
-			angOfIncR = ((nomXTgt2R + nomXTgt1L) / 2) - (pxlWidth / 2);	
-			// Convert pixels to inches
-			angOfIncR = angOfIncR * 2 * halfFoViewH / pxlWidth;
-			// Determine the angle
-			angOfIncR = Math.atan(angOfIncR / dist2Target);
-			// Convert to degrees
-			angOfIncR = RAD_TO_DEG * angOfIncR;
-			
 		} else {
 			
 			// We are closer to the right edge of the target
-			halfFoViewV = 0.5 * INCH_TGT_HEIGHT * pxlHeight / (yAtXFitTR - yAtXFitBR);
+			halfFoViewV = 0.5 * INCH_TGT_HEIGHT * pxlHeight / (yAtXFitTR - yAtXFitBR);	// 0.5 * 5 * (1080 / 378)
 			dist2Target = halfFoViewV / tanHlfAngleV;
 			System.out.println("The estimated distance to the target (in inches) is " + Double.toString(dist2Target));
 			estTgtW = (TARGET_WIDTH / INCH_TGT_HEIGHT) * (yAtXFitTR - yAtXFitBR);
-
-			halfFoViewH = 0.5 * INCH_TGT_WIDE * pxlWidth / (nomXTgt2R - nomXTgt1L);
-			// Numerator, center of target to center of view in pixels
-			angOfIncR = ((nomXTgt2R + nomXTgt1L) / 2) - (pxlWidth / 2);	
-			// Convert pixels to inches
-			angOfIncR = angOfIncR * 2 * halfFoViewH / pxlWidth;
-			// Determine the angle
-			angOfIncR = Math.atan(angOfIncR / dist2Target);
-			// Convert to degrees
-			angOfIncR = RAD_TO_DEG * angOfIncR;
 			
 		}
+		
+		//
+		halfFoViewH = 0.5 * INCH_TGT_WIDE * pxlWidth / (nomXTgt2R - nomXTgt1L);
+		// Numerator, center of target to center of view in pixels
+		angOfIncR = ((nomXTgt2R + nomXTgt1L) / 2) - (pxlWidth / 2);	
+		// Convert pixels to inches
+		angOfIncR = angOfIncR * 2 * halfFoViewH / pxlWidth;
+		// Determine the angle
+		angOfIncR = Math.atan(angOfIncR / dist2Target);
+		// Convert to degrees
+		angOfIncR = RAD_TO_DEG * angOfIncR;
 	}
 
 	private static void printLineFit() throws IOException {
@@ -268,6 +259,26 @@ public class HelloOCV {
 		}
 	}
 
+	private static void selectNextParameterSet() {
+		
+		String jpgFile = new String("LTGym3ft.jpg");
+		//String jpgFile = new String("LTGym6f45d.jpg");
+		//String jpgFile = new String("LTGym6f70d.jpg");
+		//String jpgFile = new String("LTGym8ft.jpg");
+		//String jpgFile = new String("LTGym18ft.jpg");  // No lines found
+
+		// The first pass (analysisPassCount = 0), create a set of tests but take the use the defined initial set
+		
+		// For all subsequent passes, instantiate the next set in the series
+		
+		// This class needs to interact closely with recordAnalysisResults to assess whether the last test was better or worse
+		
+	}
+	private static void recordAnalysisResults() {
+		
+		// Here we record the quality of the analysis from the most recent image analysis
+		
+	}
 	private static void findLineFit(Mat image, String[] edgeID, TargetLine[] targetLines) {
 		// Get the accompanying horizontal lines in order to validate the height of the rectangles
 		double mSlope = 0;		// slope of the line we use to fit the top of the target
