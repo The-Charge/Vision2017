@@ -39,10 +39,14 @@ public class HelloOCV {
 	private static int tgt1RightXPtr = 0;
 	private static int tgt2LeftXPtr = 0;
 	private static int tgt2RightXPtr = 0;
+	private static double lTgtAccrW = 0;
+	private static double rTgtAccrW = 0;
 	private static int vLineSet = 0; // How many sets of vertical lines are observed
 	private static int tgt1LeftXPtr = 0;
 	private static int calibrPass = 0;
 	private static boolean doCalibrate = false;
+	private static int calibrPhase = 0;
+	private static double calibrScore = 0;
 	private static double halfFoViewH = 0;
 	private static double halfFoViewV = 0;
 	private static double tanHlfAngleH = Math.tan(Math.toRadians(HALF_FIELD_ANGLE_H));
@@ -50,16 +54,16 @@ public class HelloOCV {
 	private static double dist2Target = 0;	// Calculated distance to the target in inches
 	private static final double INITIAL_LO_HUE = 74;
 	private static final double INITIAL_HI_HUE = 96;	// 93.99317406143345;
-	private static final double iloSat = 45.86330935251798;
-	private static final double ihiSat = 140;	//153;	// 128.80546075085323;
-	private static final double iloLum = 80.26079136690647;
-	private static final double ihiLum = 163.61774744027304;
-	private static double loHue = 74;
-	private static double hiHue = 96;	// 93.99317406143345;
-	private static double loSat = 45.86330935251798;
-	private static double hiSat = 140;	//153;	// 128.80546075085323;
-	private static double loLum = 80.26079136690647;
-	private static double hiLum = 163.61774744027304;
+	private static final double INITIAL_LO_SATURATION = 45.86330935251798;
+	private static final double INITIAL_HI_SATURATION = 140;	//153;	// 128.80546075085323;
+	private static final double INITIAL_LO_LUMIN = 80.26079136690647;
+	private static final double INITIAL_HI_LUMIN = 163.61774744027304;
+	private static  double loHue = 74;
+	private static  double hiHue = 96;	// 93.99317406143345;
+	private static  double loSat = 45.86330935251798;
+	private static  double hiSat = 140;	//153;	// 128.80546075085323;
+	private static  double loLum = 80.26079136690647;
+	private static  double hiLum = 163.61774744027304;
 	private static double lastxAvg = 0;
 	private static double maxDiffX = 0;
 	private static double isSameLine = 0; // Pixels between vertical lines to still consider associated
@@ -100,6 +104,18 @@ public class HelloOCV {
 	private static double optHiSat = 0;
 	private static double optLoLum = 0;
 	private static double optHiLum = 0;
+	private static double atOptLineCount = 0;	//  The ocvLineCount value at the optimum tuning
+	private static double atOptLoHue = 0;
+	private static double atOptHiHue = 0;
+	private static double atOptLoSat = 0;
+	private static double atOptHiSat = 0;
+	private static double atOptLoLum = 0;
+	private static double atOptHiLum = 0;
+	private static double atOptVLnGr = 0;
+	private static double atOptLFStErrB = 0;
+	private static double atOptLFStErrT = 0;
+	private static double atOptLTgtWdAccr = 0;
+	private static double atOptRTgtWdAccr = 0;
 	private static String jpgFile = "";
 	
 	
@@ -122,7 +138,13 @@ public class HelloOCV {
 		//NetworkTable table2Rbt = NetworkTable.getTable("Distance");
 		//table2Rbt.putNumber("Distance", 0);
 		
-		for (int i = 0; i < 1; i++){
+		if (doCalibrate) {
+			calibrPass = 0;
+		} else {
+			calibrPass = 99;
+		}
+		
+		do {
 			if (!useVIDEO) {
 				
 				// While normally not executed, here's where we choose alternate hue / saturation / luminance values for analysis
@@ -135,9 +157,14 @@ public class HelloOCV {
 			else
 				camera.read(image);
 			
-			// Having selected a source, process the image
+			// Having selected a source, process the image (this is the dominant call)
 			processSingleImage(image);
-		}
+			
+			// Moving to continuous mode (or even calibration, some variables will need to be reset
+			initializeForNextImage();
+			
+		} while (calibrPass < 99);
+			
 		if (useVIDEO)
 			camera.release();
 	}
@@ -252,6 +279,10 @@ public class HelloOCV {
 		angOfIncR = RAD_TO_DEG * angOfIncR;
 	}
 
+	private static void initializeForNextImage() {
+		
+	}
+	
 	private static void printLineFit() throws IOException {
 		PrintWriter outputStream = null;
 		try {
@@ -282,36 +313,105 @@ public class HelloOCV {
 		//String jpgFile = new String("LTGym18ft.jpg");  // No lines found
 		//private static int calibrPass = 0;
 		//private static boolean doCalibrate = false;
-		
+		//CalibrationData[] calibrRcd = new CalibrationData();
 
 		// The first pass (analysisPassCount = 0), create a set of tests but take the use the defined initial set
 		if (doCalibrate) {
 			if (calibrPass == 0) {
 				loHue = INITIAL_LO_HUE;
 				hiHue = INITIAL_HI_HUE;
-				loSat = iloSat;
-				hiSat = ihiSat;
-				loLum = iloLum;
-				hiLum = ihiLum;
+				loSat = INITIAL_LO_SATURATION;
+				hiSat = INITIAL_HI_SATURATION;
+				loLum = INITIAL_LO_LUMIN;
+				hiLum = INITIAL_HI_LUMIN;
+				optLoHue = INITIAL_LO_HUE;
+				optHiHue = INITIAL_HI_HUE;
+				optLoSat = INITIAL_LO_SATURATION;
+				optHiSat = INITIAL_HI_SATURATION;
+				optLoLum = INITIAL_LO_LUMIN;
+				optHiLum = INITIAL_HI_LUMIN;
+			} else {
+				// For all subsequent passes, instantiate the next set in the series
+				if (calibrPhase == 0) {
+					// See if narrowing the low Hue results in results that are better or worse than our best
+					loHue = loHue + 1;
+				} else {
+					calibrPhase = 99;	// Signaling the end if calibration.  Save the result
+				}
 			}
-			// For all subsequent passes, instantiate the next set in the series
 		} else {
 			loHue = INITIAL_LO_HUE;
 			hiHue = INITIAL_HI_HUE;
-			loSat = iloSat;
-			hiSat = ihiSat;
-			loLum = iloLum;
-			hiLum = ihiLum;			
+			loSat = INITIAL_LO_SATURATION;
+			hiSat = INITIAL_HI_SATURATION;
+			loLum = INITIAL_LO_LUMIN;
+			hiLum = INITIAL_HI_LUMIN;			
 		}
 		
 		
 		// This class needs to interact closely with recordAnalysisResults to assess whether the last test was better or worse
 		
 	}
-	private static void recordAnalysisResults() {
-		
+	private static void recordAnalysisResults() throws IOException {
 		// Here we record the quality of the analysis from the most recent image analysis
-		
+		if (doCalibrate) {
+			calibrScore = 0;
+			if (calibrPass == 0) {
+				atOptLoHue = loHue;
+				atOptHiHue = hiHue;
+				atOptLoSat = loSat;
+				atOptHiSat = hiSat;
+				atOptLoLum = loLum;
+				atOptHiLum = hiLum;
+				atOptVLnGr = vLineSet + 1;
+				atOptLFStErrB = stdErrB;
+				atOptLFStErrT = stdErrT;
+				atOptLTgtWdAccr = lTgtAccrW;
+				atOptRTgtWdAccr = rTgtAccrW;
+				atOptLineCount = ocvLineCount;
+			} else if (calibrPhase >= 99) {
+				// Write out the results
+				PrintWriter outputStream = null;
+				try {
+					
+					String LineOut;
+					outputStream = new PrintWriter(new FileWriter("CalibrationData.txt"));
+	
+					outputStream.println("FileImage,loHue,hiHue,loSat,hiSat,loLum,hiLum,LineCount,VLnGrps,LnFitStErrB,LnFitStErrT,LTAccur,RTAccur,Dist,AngleT,AngleR");
+					//for (int i = 0; i <= 11; i++) {
+					LineOut = jpgFile;
+					LineOut += "," + Double.toString(loHue);
+					LineOut += "," + Double.toString(hiHue);
+					LineOut += "," + Double.toString(loSat);
+					LineOut += "," + Double.toString(hiSat);
+					LineOut += "," + Double.toString(loLum);
+					LineOut += "," + Double.toString(hiLum);
+					LineOut += "," + Integer.toString(ocvLineCount);
+					LineOut += "," + Integer.toString(vLineSet + 1);
+					LineOut += "," + Double.toString(stdErrB);
+					LineOut += "," + Double.toString(stdErrT);	//lTgtAccrW
+					LineOut += "," + Double.toString(lTgtAccrW);
+					LineOut += "," + Double.toString(rTgtAccrW);
+					LineOut += "," + Double.toString(dist2Target);
+					LineOut += "," + Double.toString(angOfIncT);
+					LineOut += "," + Double.toString(angOfIncR);
+					outputStream.println(LineOut);
+						// }
+					//}
+	
+				} finally {
+					if (outputStream != null) {
+						outputStream.close();
+					}
+				}
+			} else {
+				// We first need to determine whether the last results were our best results
+				if ((ocvLineCount < atOptLineCount) && (ocvLineCount > 7)) {
+					calibrScore += 50;
+				}
+			}
+			calibrPass ++;
+		}
 	}
 	private static void findLineFit(Mat image, String[] edgeID, TargetLine[] targetLines) {
 		// Get the accompanying horizontal lines in order to validate the height of the rectangles
@@ -790,10 +890,8 @@ public class HelloOCV {
 	}
 
 	private static void findFourBestVLines(double[] totalizedVerticalLen, double[] nominalVerticalLineX) throws Exception {
-		double rectRatio = INCH_GAP_BETW / INCH_TGT_WIDE;
-		double refRatio = 0;
-		double lTgtAccrW = 0;
-		double rTgtAccrW = 0;
+		double rectRatio = 0;
+		double refRatio = INCH_GAP_BETW / INCH_TGT_WIDE;
 		boolean spacedOK = false;
 		double gap1 = 0;
 		double gap2 = 0;
@@ -821,8 +919,8 @@ public class HelloOCV {
 			
 			rectRatio = (nominalVerticalLineX[tgt2LeftXPtr] - nominalVerticalLineX[tgt1RightXPtr]);
 			rectRatio = rectRatio / (nominalVerticalLineX[tgt2RightXPtr] - nominalVerticalLineX[tgt2LeftXPtr]);
-			lTgtAccrW = rectRatio / refRatio;
-			System.out.println("The right target accuracy is 1 : " + Double.toString(lTgtAccrW));
+			rTgtAccrW = rectRatio / refRatio;
+			System.out.println("The right target accuracy is 1 : " + Double.toString(rTgtAccrW));
 			
 		} else {
 			// Find the three sets of signals that yield the best 6.25 / 2 spacing ratio
