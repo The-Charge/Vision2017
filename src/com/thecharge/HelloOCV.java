@@ -2,6 +2,7 @@ package com.thecharge;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -142,7 +143,7 @@ public class HelloOCV {
 		if (doCalibrate) {
 			calibrPass = 0;
 		} else {
-			calibrPass = 95;	// Typically we use 99 to execute one time;
+			calibrPass = 99;	// Typically we use 99 to execute one time;
 		}
 		
 		do {
@@ -411,15 +412,20 @@ public class HelloOCV {
 				atOptLTgtWdAccr = lTgtAccrW;
 				atOptRTgtWdAccr = rTgtAccrW;
 				atOptLineCount = ocvLineCount;
+								
+				// Choose an efficient means to repetitively append an analysis file (create new here)
+				try(PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter("calibr_data.txt", false)))) {
+				    out.println("FileImage,loHue,hiHue,loSat,hiSat,loLum,hiLum,LineCount,VLnGrps,LnFitStErrB,LnFitStErrT,LTAccur,RTAccur,Dist,AngleT,AngleR,Score");
+				}catch (IOException e) {
+				    System.err.println(e);
+				}			
+				
+				
 			} else if (calibrPhase >= 99) {
-				// Write out the results
-				PrintWriter outputStream = null;
-				try {
-					
+
+				// Choose an efficient means to repetitively append an analysis file (append here)
+				try(PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter("calibr_data.txt", true)))) {
 					String LineOut;
-					outputStream = new PrintWriter(new FileWriter("CalibrationData.txt"));
-	
-					outputStream.println("FileImage,loHue,hiHue,loSat,hiSat,loLum,hiLum,LineCount,VLnGrps,LnFitStErrB,LnFitStErrT,LTAccur,RTAccur,Dist,AngleT,AngleR");
 					LineOut = jpgFile;
 					LineOut += "," + Double.toString(loHue);
 					LineOut += "," + Double.toString(hiHue);
@@ -436,20 +442,44 @@ public class HelloOCV {
 					LineOut += "," + Double.toString(dist2Target);
 					LineOut += "," + Double.toString(angOfIncT);
 					LineOut += "," + Double.toString(angOfIncR);
-					outputStream.println(LineOut);
-						// }
-					//}
-	
-				} finally {
-					if (outputStream != null) {
-						outputStream.close();
-					}
-				}
+					LineOut += "," + Double.toString(calibrScore);
+					out.println(LineOut);
+				}catch (IOException e) {
+				    System.err.println(e);
+				}			
+				
 			} else {
 				// We first need to determine whether the last results were our best results
 				if ((ocvLineCount < atOptLineCount) && (ocvLineCount > 7)) {
 					calibrScore += 50;
 				}
+
+				// Choose an efficient means to repetitively append an analysis file (append here)
+				try(PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter("calibr_data.txt", true)))) {
+					String LineOut;
+					LineOut = jpgFile;
+					LineOut += "," + Double.toString(loHue);
+					LineOut += "," + Double.toString(hiHue);
+					LineOut += "," + Double.toString(loSat);
+					LineOut += "," + Double.toString(hiSat);
+					LineOut += "," + Double.toString(loLum);
+					LineOut += "," + Double.toString(hiLum);
+					LineOut += "," + Integer.toString(ocvLineCount);
+					LineOut += "," + Integer.toString(vLineSet + 1);
+					LineOut += "," + Double.toString(stdErrB);
+					LineOut += "," + Double.toString(stdErrT);	//lTgtAccrW
+					LineOut += "," + Double.toString(lTgtAccrW);
+					LineOut += "," + Double.toString(rTgtAccrW);
+					LineOut += "," + Double.toString(dist2Target);
+					LineOut += "," + Double.toString(angOfIncT);
+					LineOut += "," + Double.toString(angOfIncR);
+					LineOut += "," + Double.toString(calibrScore);
+					out.println(LineOut);
+				}catch (IOException e) {
+				    System.err.println(e);
+				}			
+
+			
 			}
 		}
 		if (calibrPass < 100) calibrPass ++;
