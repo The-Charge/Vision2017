@@ -374,6 +374,7 @@ public class HelloOCV {
 			} else {
 				// For all subsequent passes, instantiate the next set in the series
 				if (calibrPhase == 0) {
+					
 					// See if narrowing the low Hue results in results that are better or worse than our best
 					loHue = loHue + 1;
 				} else {
@@ -1388,8 +1389,15 @@ public class HelloOCV {
 		
 		if (TROUBLESHOOTING_MODE) System.out.println("The number of line sets is " + Integer.toString(vLineSet + 1));
 		// What do we do if we don't find at least 4 lines
+		//TODO: Account for a situation where there are less than 4 vertical line sets
 		if (vLineSet < 3) {
-			throw new Exception("vLineSet is less than 3 (less than 4 vertical lines).");
+			//throw new Exception("vLineSet is less than 3 (less than 4 vertical lines).");
+			if (dist2Target < .5) {
+				//DriveXFeet(.5)
+			}
+			else{
+				//Adjust the robot
+			}
 		}
 		if (TROUBLESHOOTING_MODE) System.out.println();
 	}
