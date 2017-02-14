@@ -19,8 +19,7 @@ import org.opencv.core.Point;
 
 import com.thecharge.GripPipelineGym.Line;
 
-//Need to add java libraries
-//import edu.wpi.first.wpilibj.networktables.NetworkTable;
+import edu.wpi.first.wpilibj.networktables.NetworkTable;
 
 public class HelloOCV {
 	private static final boolean troubleshoot = false;
@@ -46,7 +45,7 @@ public class HelloOCV {
 	private static int vLineSet = 0; // How many sets of vertical lines are observed
 	private static int tgt1LeftXPtr = 0;
 	private static int calibrPass = 0;
-	private static boolean doCalibrate = false;
+	private static boolean doCalibrate = true;
 	private static int calibrPhase = 0;
 	private static double calibrScore = 0;
 	private static double halfFoViewH = 0;
@@ -135,10 +134,9 @@ public class HelloOCV {
 		}
 		
 		//Network Table Code
-		//NetworkTable.setClientMode();
-		//NetworkTable.setIPAddress("127.0.0.1");
-		//NetworkTable table2Rbt = NetworkTable.getTable("Distance");
-		//table2Rbt.putNumber("Distance", 0);
+		NetworkTable.setClientMode();
+		NetworkTable.setIPAddress("127.0.0.1");
+		NetworkTable table2Rbt = NetworkTable.getTable("Distance");
 		
 		if (doCalibrate) {
 			calibrPass = 0;
@@ -161,7 +159,7 @@ public class HelloOCV {
 			
 			// Having selected a source, process the image (this is the dominant call)
 			processSingleImage(image);
-			
+			table2Rbt.putNumber("Distance", dist2Target);
 			// Moving to continuous mode (or even calibration, some variables will need to be reset
 			initializeForNextImage();
 			
