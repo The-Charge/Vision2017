@@ -22,8 +22,9 @@ import com.thecharge.GripPipelineGym.Line;
 import edu.wpi.first.wpilibj.networktables.NetworkTable;
 
 public class HelloOCV {
-	private static final boolean troubleshoot = false;
-	private static final boolean useVIDEO = false;
+	private static final boolean TROUBLESHOOTING_MODE = false;
+	private static final boolean CALIBRATION_MODE = false;
+	private static final boolean USE_VIDEO = false;
 	private static final double INCH_GAP_BETW = 6.25; // Distance between reflective targets
 	private static final double INCH_TGT_WIDE = 2; // Width of the reflective target
 	private static final double INCH_TGT_HEIGHT = 5; // Height of the reflective target
@@ -45,7 +46,6 @@ public class HelloOCV {
 	private static int vLineSet = 0; // How many sets of vertical lines are observed
 	private static int tgt1LeftXPtr = 0;
 	private static int calibrPass = 0;
-	private static boolean doCalibrate = true;
 	private static int calibrPhase = 0;
 	private static double calibrScore = 0;
 	private static double halfFoViewH = 0;
@@ -126,7 +126,7 @@ public class HelloOCV {
 		
 		VideoCapture camera = null;
 		
-		if (useVIDEO) {
+		if (USE_VIDEO) {
 			camera = new VideoCapture(1);
 	    	if(!camera.isOpened()){
 				throw new Exception("Can't open the camera.");
@@ -138,14 +138,14 @@ public class HelloOCV {
 		NetworkTable.setIPAddress("127.0.0.1");
 		NetworkTable table2Rbt = NetworkTable.getTable("Distance");
 		
-		if (doCalibrate) {
+		if (CALIBRATION_MODE) {
 			calibrPass = 0;
 		} else {
 			calibrPass = 99;	// Typically we use 99 to execute one time;
 		}
 		
 		do {
-			if (!useVIDEO) {
+			if (!USE_VIDEO) {
 				
 				// While normally not executed, here's where we choose alternate hue / saturation / luminance values for analysis
 				selectNextParameterSet();
@@ -165,7 +165,7 @@ public class HelloOCV {
 			
 		} while (calibrPass < 99);
 			
-		if (useVIDEO)
+		if (USE_VIDEO)
 			camera.release();
 	}
 
@@ -357,7 +357,7 @@ public class HelloOCV {
 		//CalibrationData[] calibrRcd = new CalibrationData();
 
 		// The first pass (analysisPassCount = 0), create a set of tests but take the use the defined initial set
-		if (doCalibrate) {
+		if (CALIBRATION_MODE) {
 			if (calibrPass == 0) {
 				loHue = INITIAL_LO_HUE;
 				hiHue = INITIAL_HI_HUE;
@@ -395,7 +395,7 @@ public class HelloOCV {
 	}
 	private static void recordAnalysisResults() throws IOException {
 		// Here we record the quality of the analysis from the most recent image analysis
-		if (doCalibrate) {
+		if (CALIBRATION_MODE) {
 			calibrScore = 0;
 			if (calibrPass == 0) {
 				atOptLoHue = loHue;
@@ -488,12 +488,12 @@ public class HelloOCV {
 		double mSlope = 0;		// slope of the line we use to fit the top of the target
 		double yIntcpt = 0;		// y intercept for the line we use to fit to
 		Random rand = new Random();
-		if (troubleshoot) System.out.println(" ");
+		if (TROUBLESHOOTING_MODE) System.out.println(" ");
 		
 		// Get linefit coordinates for the "top" horizontal lines of target 1
 		for (int zLpCtr1 = 0; zLpCtr1 < ocvLineCount; zLpCtr1++) {
 			if (edgeID[zLpCtr1] == "1HT") {
-				if (troubleshoot) System.out.println("Find linefit coordinates for line " + Integer.toString(zLpCtr1));
+				if (TROUBLESHOOTING_MODE) System.out.println("Find linefit coordinates for line " + Integer.toString(zLpCtr1));
 				mSlope = (targetLines[zLpCtr1].ocvY2 - targetLines[zLpCtr1].ocvY1) / (targetLines[zLpCtr1].ocvX2 - targetLines[zLpCtr1].ocvX1);
 				yIntcpt = targetLines[zLpCtr1].ocvY1 - mSlope * targetLines[zLpCtr1].ocvX1;
 				for (int zLpCtr2 = 0; zLpCtr2 < 6; zLpCtr2++) {
@@ -509,10 +509,10 @@ public class HelloOCV {
 						// We introduce a probablistic approach to overwriting the result from a previous line
 						if (yAtYfind[zLpCtr2] == 0) {
 							yAtYfind[zLpCtr2] = mSlope * xAtYfind[zLpCtr2] + yIntcpt;
-							if (troubleshoot) System.out.println("Fitting for x / y of " + Double.toString(xAtYfind[zLpCtr2]) + " / " + Double.toString(yAtYfind[zLpCtr2]));
+							if (TROUBLESHOOTING_MODE) System.out.println("Fitting for x / y of " + Double.toString(xAtYfind[zLpCtr2]) + " / " + Double.toString(yAtYfind[zLpCtr2]));
 						} else if (rand.nextInt(100) > 50) {
 							yAtYfind[zLpCtr2] = mSlope * xAtYfind[zLpCtr2] + yIntcpt;
-							if (troubleshoot) System.out.println("Fitting for x / y of " + Double.toString(xAtYfind[zLpCtr2]) + " / " + Double.toString(yAtYfind[zLpCtr2]));
+							if (TROUBLESHOOTING_MODE) System.out.println("Fitting for x / y of " + Double.toString(xAtYfind[zLpCtr2]) + " / " + Double.toString(yAtYfind[zLpCtr2]));
 						}
 					}
 				}
@@ -522,10 +522,10 @@ public class HelloOCV {
 		// Now get linefit coordinates for the top horizontal lines of target 2
 		for (int zLpCtr1 = 0; zLpCtr1 < ocvLineCount; zLpCtr1++) {
 			if (edgeID[zLpCtr1] == "2HT") {
-				if (troubleshoot) System.out.println("Find linefit coordinates for line " + Integer.toString(zLpCtr1));
+				if (TROUBLESHOOTING_MODE) System.out.println("Find linefit coordinates for line " + Integer.toString(zLpCtr1));
 				mSlope = (targetLines[zLpCtr1].ocvY2 - targetLines[zLpCtr1].ocvY1) / (targetLines[zLpCtr1].ocvX2 - targetLines[zLpCtr1].ocvX1);
 				yIntcpt = targetLines[zLpCtr1].ocvY1 - mSlope * targetLines[zLpCtr1].ocvX1;
-				if (troubleshoot) System.out.println("Slope and Intercept as " + Double.toString(mSlope) + " / " + Double.toString(yIntcpt));
+				if (TROUBLESHOOTING_MODE) System.out.println("Slope and Intercept as " + Double.toString(mSlope) + " / " + Double.toString(yIntcpt));
 				for (int zLpCtr2 = 6; zLpCtr2 < 12; zLpCtr2++) {
 					// Don't generate linefit points that don't reside inside the identified line 
 					if (targetLines[zLpCtr1].ocvX2 > targetLines[zLpCtr1].ocvX1) {
@@ -539,10 +539,10 @@ public class HelloOCV {
 						// We introduce a probablistic approach to overwriting the result from a previous line
 						if (yAtYfind[zLpCtr2] == 0) {
 							yAtYfind[zLpCtr2] = mSlope * xAtYfind[zLpCtr2] + yIntcpt;
-							if (troubleshoot) System.out.println("Fitting for x / y of " + Double.toString(xAtYfind[zLpCtr2]) + " / " + Double.toString(yAtYfind[zLpCtr2]));
+							if (TROUBLESHOOTING_MODE) System.out.println("Fitting for x / y of " + Double.toString(xAtYfind[zLpCtr2]) + " / " + Double.toString(yAtYfind[zLpCtr2]));
 						} else if (rand.nextInt(100) > 50) {
 							yAtYfind[zLpCtr2] = mSlope * xAtYfind[zLpCtr2] + yIntcpt;
-							if (troubleshoot) System.out.println("Fitting for x / y of " + Double.toString(xAtYfind[zLpCtr2]) + " / " + Double.toString(yAtYfind[zLpCtr2]));
+							if (TROUBLESHOOTING_MODE) System.out.println("Fitting for x / y of " + Double.toString(xAtYfind[zLpCtr2]) + " / " + Double.toString(yAtYfind[zLpCtr2]));
 						}
 					}
 				}
@@ -550,7 +550,7 @@ public class HelloOCV {
 		}
 		
 		
-		if (troubleshoot) System.out.println(" ");
+		if (TROUBLESHOOTING_MODE) System.out.println(" ");
 		
 		// Now make the calculations necessary to perform the slope / intercept calculations of the horizontal best fit
 		double sumx = 0;
@@ -596,12 +596,12 @@ public class HelloOCV {
         }
         stdErr = Math.sqrt(stdErrT);
         
-		if (troubleshoot) System.out.println("Determined slope / intercept of " + Double.toString(topSlope) + " / " + Double.toString(topIntercept));
+		if (TROUBLESHOOTING_MODE) System.out.println("Determined slope / intercept of " + Double.toString(topSlope) + " / " + Double.toString(topIntercept));
         yAtXFitTL = topSlope * nomXTgt1L + topIntercept;
         yAtXFitTR = topSlope * nomXTgt2R + topIntercept;
-		if (troubleshoot) System.out.println("Top Left x / y of " + Double.toString(nomXTgt1L) + " / " + Double.toString(yAtXFitTL));
-		if (troubleshoot) System.out.println("Top Right x / y of " + Double.toString(nomXTgt2R) + " / " + Double.toString(yAtXFitTR));
-		if (troubleshoot) System.out.println(" ");
+		if (TROUBLESHOOTING_MODE) System.out.println("Top Left x / y of " + Double.toString(nomXTgt1L) + " / " + Double.toString(yAtXFitTL));
+		if (TROUBLESHOOTING_MODE) System.out.println("Top Right x / y of " + Double.toString(nomXTgt2R) + " / " + Double.toString(yAtXFitTR));
+		if (TROUBLESHOOTING_MODE) System.out.println(" ");
 		
 		// Repeat for the "bottom" line
 		
@@ -613,7 +613,7 @@ public class HelloOCV {
 		// Get linefit coordinates for the "bottom" horizontal lines of target 1		for (int zLpCtr1 = 0; zLpCtr1 < ocvLineCount; zLpCtr1++) {
 		for (int zLpCtr1 = 0; zLpCtr1 < ocvLineCount; zLpCtr1++) {
 			if (edgeID[zLpCtr1] == "1HB") {
-				if (troubleshoot) System.out.println("Find linefit coordinates for line " + Integer.toString(zLpCtr1));
+				if (TROUBLESHOOTING_MODE) System.out.println("Find linefit coordinates for line " + Integer.toString(zLpCtr1));
 				mSlope = (targetLines[zLpCtr1].ocvY2 - targetLines[zLpCtr1].ocvY1) / (targetLines[zLpCtr1].ocvX2 - targetLines[zLpCtr1].ocvX1);
 				yIntcpt = targetLines[zLpCtr1].ocvY1 - mSlope * targetLines[zLpCtr1].ocvX1;
 				for (int zLpCtr2 = 0; zLpCtr2 < 6; zLpCtr2++) {
@@ -629,10 +629,10 @@ public class HelloOCV {
 						// We introduce a probablistic approach to overwriting the result from a previous line
 						if (yAtYfind[zLpCtr2] == 0) {
 							yAtYfind[zLpCtr2] = mSlope * xAtYfind[zLpCtr2] + yIntcpt;
-							if (troubleshoot) System.out.println("Fitting for x / y of " + Double.toString(xAtYfind[zLpCtr2]) + " / " + Double.toString(yAtYfind[zLpCtr2]));
+							if (TROUBLESHOOTING_MODE) System.out.println("Fitting for x / y of " + Double.toString(xAtYfind[zLpCtr2]) + " / " + Double.toString(yAtYfind[zLpCtr2]));
 						} else if (rand.nextInt(100) > 50) {
 							yAtYfind[zLpCtr2] = mSlope * xAtYfind[zLpCtr2] + yIntcpt;
-							if (troubleshoot) System.out.println("Fitting for x / y of " + Double.toString(xAtYfind[zLpCtr2]) + " / " + Double.toString(yAtYfind[zLpCtr2]));
+							if (TROUBLESHOOTING_MODE) System.out.println("Fitting for x / y of " + Double.toString(xAtYfind[zLpCtr2]) + " / " + Double.toString(yAtYfind[zLpCtr2]));
 						}
 					}
 				}
@@ -642,10 +642,10 @@ public class HelloOCV {
 		// Now get linefit coordinates for the "bottom" horizontal lines of target 2
 		for (int zLpCtr1 = 0; zLpCtr1 < ocvLineCount; zLpCtr1++) {
 			if (edgeID[zLpCtr1] == "2HB") {
-				if (troubleshoot) System.out.println("Find linefit coordinates for line " + Integer.toString(zLpCtr1));
+				if (TROUBLESHOOTING_MODE) System.out.println("Find linefit coordinates for line " + Integer.toString(zLpCtr1));
 				mSlope = (targetLines[zLpCtr1].ocvY2 - targetLines[zLpCtr1].ocvY1) / (targetLines[zLpCtr1].ocvX2 - targetLines[zLpCtr1].ocvX1);
 				yIntcpt = targetLines[zLpCtr1].ocvY1 - mSlope * targetLines[zLpCtr1].ocvX1;
-				if (troubleshoot) System.out.println("Slope and Intercept as " + Double.toString(mSlope) + " / " + Double.toString(yIntcpt));
+				if (TROUBLESHOOTING_MODE) System.out.println("Slope and Intercept as " + Double.toString(mSlope) + " / " + Double.toString(yIntcpt));
 				for (int zLpCtr2 = 6; zLpCtr2 < 12; zLpCtr2++) {
 					// Don't generate linefit points that don't reside inside the identified line 
 					if (targetLines[zLpCtr1].ocvX2 > targetLines[zLpCtr1].ocvX1) {
@@ -659,17 +659,17 @@ public class HelloOCV {
 						// We introduce a probablistic approach to overwriting the result from a previous line
 						if (yAtYfind[zLpCtr2] == 0) {
 							yAtYfind[zLpCtr2] = mSlope * xAtYfind[zLpCtr2] + yIntcpt;
-							if (troubleshoot) System.out.println("Fitting for x / y of " + Double.toString(xAtYfind[zLpCtr2]) + " / " + Double.toString(yAtYfind[zLpCtr2]));
+							if (TROUBLESHOOTING_MODE) System.out.println("Fitting for x / y of " + Double.toString(xAtYfind[zLpCtr2]) + " / " + Double.toString(yAtYfind[zLpCtr2]));
 						} else if (rand.nextInt(100) > 50) {
 							yAtYfind[zLpCtr2] = mSlope * xAtYfind[zLpCtr2] + yIntcpt;
-							if (troubleshoot) System.out.println("Fitting for x / y of " + Double.toString(xAtYfind[zLpCtr2]) + " / " + Double.toString(yAtYfind[zLpCtr2]));
+							if (TROUBLESHOOTING_MODE) System.out.println("Fitting for x / y of " + Double.toString(xAtYfind[zLpCtr2]) + " / " + Double.toString(yAtYfind[zLpCtr2]));
 						}
 					}
 				}
 			} 
 		}
 		
-		if (troubleshoot) System.out.println(" ");
+		if (TROUBLESHOOTING_MODE) System.out.println(" ");
 		
 		// Re-initialize the variables used to calculate slope / intercept
 		sumx = 0;
@@ -716,16 +716,16 @@ public class HelloOCV {
         }
         stdErr += Math.sqrt(stdErrB);
         
-		if (troubleshoot) System.out.println("Determined slope / intercept of " + Double.toString(bottomSlope) + " / " + Double.toString(bottomIntercept));
+		if (TROUBLESHOOTING_MODE) System.out.println("Determined slope / intercept of " + Double.toString(bottomSlope) + " / " + Double.toString(bottomIntercept));
         yAtXFitBL = bottomSlope * nomXTgt1L + bottomIntercept;
         yAtXFitBR = bottomSlope * nomXTgt2R + bottomIntercept;
         Point ptTL = new Point(nomXTgt1L, yAtXFitTL);
         Point ptTR = new Point(nomXTgt2R, yAtXFitTR);
         Point ptBL = new Point(nomXTgt1L, yAtXFitBL);
         Point ptBR = new Point(nomXTgt2R, yAtXFitBR);
-		if (troubleshoot) System.out.println("Bottom Left x / y of " + Double.toString(nomXTgt1L) + " / " + Double.toString(yAtXFitBL));
-		if (troubleshoot) System.out.println("Bottom Right x / y of " + Double.toString(nomXTgt2R) + " / " + Double.toString(yAtXFitBR));
-		if (troubleshoot) System.out.println(" ");
+		if (TROUBLESHOOTING_MODE) System.out.println("Bottom Left x / y of " + Double.toString(nomXTgt1L) + " / " + Double.toString(yAtXFitBL));
+		if (TROUBLESHOOTING_MODE) System.out.println("Bottom Right x / y of " + Double.toString(nomXTgt2R) + " / " + Double.toString(yAtXFitBR));
+		if (TROUBLESHOOTING_MODE) System.out.println(" ");
 
 		// Update our picture with the new determined top line
 		Imgproc.line(image, ptTL, ptTR, new Scalar(0,0,255), 1);
@@ -828,50 +828,50 @@ public class HelloOCV {
 		nomYTgtBtm = nomYTgtBtm/(vLineSet + 1);
 		nomYTgtTop = nomYTgtTop/(vLineSet + 1);
 		
-		if (troubleshoot) System.out.println("The top of the target is estimated at " + Double.toString(nomYTgtTop));
-		if (troubleshoot) System.out.println("The bottom of the target is estimated at " + Double.toString(nomYTgtBtm));
-		if (troubleshoot) System.out.println("The allowable error is " + Double.toString(okHLGap));
+		if (TROUBLESHOOTING_MODE) System.out.println("The top of the target is estimated at " + Double.toString(nomYTgtTop));
+		if (TROUBLESHOOTING_MODE) System.out.println("The bottom of the target is estimated at " + Double.toString(nomYTgtBtm));
+		if (TROUBLESHOOTING_MODE) System.out.println("The allowable error is " + Double.toString(okHLGap));
 		
 		// Note the nominal left and right target X values for each of the two targets
 		nomXTgt1L = nominalVerticalLineX[tgt1LeftXPtr];
-		if (troubleshoot) System.out.println("Left edge of target 1 has x = " + Double.toString(nomXTgt1L));
+		if (TROUBLESHOOTING_MODE) System.out.println("Left edge of target 1 has x = " + Double.toString(nomXTgt1L));
 		nomXTgt1R = nominalVerticalLineX[tgt1RightXPtr];
-		if (troubleshoot) System.out.println("Right edge of target 1 has x = " + Double.toString(nomXTgt1R));
+		if (TROUBLESHOOTING_MODE) System.out.println("Right edge of target 1 has x = " + Double.toString(nomXTgt1R));
 		nomXTgt2L = nominalVerticalLineX[tgt2LeftXPtr];
-		if (troubleshoot) System.out.println("Left edge of target 2 has x = " + Double.toString(nomXTgt2L));
+		if (TROUBLESHOOTING_MODE) System.out.println("Left edge of target 2 has x = " + Double.toString(nomXTgt2L));
 		nomXTgt2R = nominalVerticalLineX[tgt2RightXPtr];
-		if (troubleshoot) System.out.println("Right edge of target 2 has x = " + Double.toString(nomXTgt2R));
-		if (troubleshoot) System.out.println(" ");
+		if (TROUBLESHOOTING_MODE) System.out.println("Right edge of target 2 has x = " + Double.toString(nomXTgt2R));
+		if (TROUBLESHOOTING_MODE) System.out.println(" ");
 
 
 		// At this point we can capture 6 preferred points associated with each target's horizontal line fits
 		incrX = (nomXTgt1R - nomXTgt1L) / 7;
 		xAtYfind[0] = nomXTgt1L + incrX;
 		yAtYfind[0] = 0;
-		if (troubleshoot) System.out.println("Find Y at X = " + xAtYfind[0]);
+		if (TROUBLESHOOTING_MODE) System.out.println("Find Y at X = " + xAtYfind[0]);
 		for (int zLpCtr1 = 1; zLpCtr1 < 6; zLpCtr1++) {
 			xAtYfind[zLpCtr1] = xAtYfind[zLpCtr1 - 1] + incrX;
 			yAtYfind[zLpCtr1] = 0;
-			if (troubleshoot) System.out.println("Find Y at X = " + xAtYfind[zLpCtr1]);
+			if (TROUBLESHOOTING_MODE) System.out.println("Find Y at X = " + xAtYfind[zLpCtr1]);
 		}
 		
 		incrX = (nomXTgt2R - nomXTgt2L) / 7;
 		xAtYfind[6] = nomXTgt2L + incrX;
 		yAtYfind[6] = 0;
-		if (troubleshoot) System.out.println("Find Y at X = " + xAtYfind[6]);
+		if (TROUBLESHOOTING_MODE) System.out.println("Find Y at X = " + xAtYfind[6]);
 		for (int zLpCtr1 = 7; zLpCtr1 < 12; zLpCtr1++) {
 			xAtYfind[zLpCtr1] = xAtYfind[zLpCtr1 - 1] + incrX;
 			yAtYfind[zLpCtr1] = 0;
-			if (troubleshoot) System.out.println("Find Y at X = " + xAtYfind[zLpCtr1]);
+			if (TROUBLESHOOTING_MODE) System.out.println("Find Y at X = " + xAtYfind[zLpCtr1]);
 		}
-		if (troubleshoot) System.out.println(" ");
+		if (TROUBLESHOOTING_MODE) System.out.println(" ");
 		
 		for (int x = 0; x < ocvLineCount; x++) {
 			// No processing required for lines that aren't horizontal
 			if (targetLines[x].isHorizontal()) {
 				// For each of the grouped vertical line pairs, look for the target tops and bottoms
 				
-				if (troubleshoot) System.out.println("Evaluating horizontal line " + Integer.toString(x));
+				if (TROUBLESHOOTING_MODE) System.out.println("Evaluating horizontal line " + Integer.toString(x));
 
 				// Having found an(other) line within the line group, get the min and max and see if we can validate the target's horizontal lines
 				if (targetLines[x].ocvX1 < targetLines[x].ocvX2) {
@@ -884,7 +884,7 @@ public class HelloOCV {
 				
 				// Because the line is roughly horizontal, it doesn't matter much whether we choose Y1 or Y2
 				if ((targetLines[x].ocvY1 < (nomYTgtTop + okHLGap)) && (targetLines[x].ocvY1 > (nomYTgtTop - okHLGap))) {
-					if (troubleshoot) System.out.println("Initial top alignment for line " + Integer.toString(x));
+					if (TROUBLESHOOTING_MODE) System.out.println("Initial top alignment for line " + Integer.toString(x));
 					
 					// Assess whether we're looking at the left or the right target for this line
 					if ((testX1 > (nomXTgt1L - okHLGap)) && (testX2 < (nomXTgt1R + okHLGap))) {
@@ -914,7 +914,7 @@ public class HelloOCV {
 					}
 					
 				} else if ((targetLines[x].ocvY1 < (nomYTgtBtm + okHLGap)) && (targetLines[x].ocvY1 > (nomYTgtBtm - okHLGap))) {
-					if (troubleshoot) System.out.println("Initial bottom alignment for line " + Integer.toString(x));
+					if (TROUBLESHOOTING_MODE) System.out.println("Initial bottom alignment for line " + Integer.toString(x));
 
 					// Assess whether we're looking at the left or the right target for this line
 					if ((testX1 > (nomXTgt1L - okHLGap)) && (testX2 < (nomXTgt1R + okHLGap))) {
@@ -985,12 +985,12 @@ public class HelloOCV {
 			rectRatio = (nominalVerticalLineX[tgt2LeftXPtr] - nominalVerticalLineX[tgt1RightXPtr]);
 			rectRatio = rectRatio / (nominalVerticalLineX[tgt1RightXPtr] - nominalVerticalLineX[tgt1LeftXPtr]);
 			lTgtAccrW = rectRatio / refRatio;
-			if (troubleshoot) System.out.println("The left target accuracy is 1 : " + Double.toString(lTgtAccrW));
+			if (TROUBLESHOOTING_MODE) System.out.println("The left target accuracy is 1 : " + Double.toString(lTgtAccrW));
 			
 			rectRatio = (nominalVerticalLineX[tgt2LeftXPtr] - nominalVerticalLineX[tgt1RightXPtr]);
 			rectRatio = rectRatio / (nominalVerticalLineX[tgt2RightXPtr] - nominalVerticalLineX[tgt2LeftXPtr]);
 			rTgtAccrW = rectRatio / refRatio;
-			if (troubleshoot) System.out.println("The right target accuracy is 1 : " + Double.toString(rTgtAccrW));
+			if (TROUBLESHOOTING_MODE) System.out.println("The right target accuracy is 1 : " + Double.toString(rTgtAccrW));
 			
 		} else {
 			// Find the three sets of signals that yield the best 6.25 / 2 spacing ratio
@@ -999,15 +999,15 @@ public class HelloOCV {
 					for (int z = 2; z <= (vLineSet-1); z++) {
 						for (int w = 3; w <= vLineSet; w++) {
 							if ((x < y) && (y < z) && (z < w)){
-								if (troubleshoot) System.out.println("Assessing line set : " + Integer.toString(x) + ":" + Integer.toString(y) + ":" + Integer.toString(z) + ":" + Integer.toString(w));
+								if (TROUBLESHOOTING_MODE) System.out.println("Assessing line set : " + Integer.toString(x) + ":" + Integer.toString(y) + ":" + Integer.toString(z) + ":" + Integer.toString(w));
 								spacedOK = false;
 								lineWt = 0;
 								gap1 = (nominalVerticalLineX[y] - nominalVerticalLineX[x]);
 								gap2 = (nominalVerticalLineX[z] - nominalVerticalLineX[y]);
 								gap3 = (nominalVerticalLineX[w] - nominalVerticalLineX[z]);
-								if (troubleshoot) System.out.println("Assessing gap of : " + Double.toString(gap1));
-								if (troubleshoot) System.out.println("Assessing gap of : " + Double.toString(gap2));
-								if (troubleshoot) System.out.println("Assessing gap of : " + Double.toString(gap3));
+								if (TROUBLESHOOTING_MODE) System.out.println("Assessing gap of : " + Double.toString(gap1));
+								if (TROUBLESHOOTING_MODE) System.out.println("Assessing gap of : " + Double.toString(gap2));
+								if (TROUBLESHOOTING_MODE) System.out.println("Assessing gap of : " + Double.toString(gap3));
 								if (((gap3 / gap1) < 1.5) && ((gap1 / gap3) < 1.5)) {
 									if (((gap2 / gap1) > 3) && ((gap2 / gap3) > 3)) {
 										if (((gap2 / gap1) < 10) && ((gap2 / gap3) < 10)) {
@@ -1029,18 +1029,18 @@ public class HelloOCV {
 				}
 			}
 			
-			if (troubleshoot) System.out.println("Best weighted value : " + Double.toString(bestWt));
+			if (TROUBLESHOOTING_MODE) System.out.println("Best weighted value : " + Double.toString(bestWt));
 			
 			if (bestWt == 0) {
 				throw new Exception("vLineSet is perhaps greater than 4 and handling logic is required.");
 			}
-			if (troubleshoot) System.out.println("Selecting verticals : " + Integer.toString(vertSel[0]) + ":" + Integer.toString(vertSel[1]) + ":" + Integer.toString(vertSel[2]) + ":" + Integer.toString(vertSel[3]));
+			if (TROUBLESHOOTING_MODE) System.out.println("Selecting verticals : " + Integer.toString(vertSel[0]) + ":" + Integer.toString(vertSel[1]) + ":" + Integer.toString(vertSel[2]) + ":" + Integer.toString(vertSel[3]));
 			tgt1LeftXPtr = vertSel[0];
 			tgt1RightXPtr = vertSel[1];
 			tgt2LeftXPtr = vertSel[2];
 			tgt2RightXPtr = vertSel[3];
 		}
-		if (troubleshoot) System.out.println();
+		if (TROUBLESHOOTING_MODE) System.out.println();
 	}
 
 	private static void findLongestContiguousVLines(TargetLine[] targetLines, double[] nominalVerticalLineX,
@@ -1054,14 +1054,14 @@ public class HelloOCV {
 		
 		// For each vertical line group, find the longest contiguous series of associated segments (ideally 1 series)
 		for (int x = 0; x <= vLineSet; x++) {
-			if (troubleshoot) System.out.println("Evaluating vertical line group " + Integer.toString(x));
+			if (TROUBLESHOOTING_MODE) System.out.println("Evaluating vertical line group " + Integer.toString(x));
 			diffVLCount = 0;
 			// For each original line relating to this line group, append as able
 			for (int y = 0; y < ocvLineCount; y++) {
 				if (targetLines[y].isVertical()) {
 					if ((targetLines[y].xAvg >= nominalVerticalLineX[x] - isSameLine) && (targetLines[y].xAvg <= nominalVerticalLineX[x] + isSameLine)) {
 						// At least for now, confirm that we're evaluating all of the appropriate vertical lines
-						if (troubleshoot) System.out.println("Evaluating for grouping vertical line " + Integer.toString(y));
+						if (TROUBLESHOOTING_MODE) System.out.println("Evaluating for grouping vertical line " + Integer.toString(y));
 
 						// Having found an(other) line within the line group, get the min and max and see if we can append it to one of the sets
 						// or whether we possibly have to append the set
@@ -1075,7 +1075,7 @@ public class HelloOCV {
 							
 							
 						if (diffVLCount == 0) {
-							if (troubleshoot) System.out.println("Initializing resulting vertical line " + Integer.toString(x));
+							if (TROUBLESHOOTING_MODE) System.out.println("Initializing resulting vertical line " + Integer.toString(x));
 							// Prepare either to compare this segment with other segments in hope of appending vertical lines...
 							yMinVerticalLine[diffVLCount] = testY1;
 							yMaxVerticalLine[diffVLCount] = testY2;
@@ -1319,7 +1319,7 @@ public class HelloOCV {
 			}
 		}
 		
-		if (troubleshoot) System.out.println();
+		if (TROUBLESHOOTING_MODE) System.out.println();
 	}
 
 	private static void groupVerticalLines(double[] xAvgDiff, TargetLine[] targetLines, double[] totalizedVerticalLen,
@@ -1347,8 +1347,8 @@ public class HelloOCV {
 				// Capture the nominal x coordinate
 				nominalVerticalLineX[vLineSet] = (lastAdjVerticalline + firstAdjVerticalline) / 2;
 				
-				if (troubleshoot) System.out.println("This line of length " + Double.toString(totalizedVerticalLen[vLineSet]));
-				if (troubleshoot) System.out.println("Its position is roughly " + Double.toString(nominalVerticalLineX[vLineSet]));
+				if (TROUBLESHOOTING_MODE) System.out.println("This line of length " + Double.toString(totalizedVerticalLen[vLineSet]));
+				if (TROUBLESHOOTING_MODE) System.out.println("Its position is roughly " + Double.toString(nominalVerticalLineX[vLineSet]));
 				
 				// Capture the x coordinate for the first line in the new group
 				firstAdjVerticalline = targetLines[x].xAvg;
@@ -1362,7 +1362,7 @@ public class HelloOCV {
 				// The line is vertical but is close enough in proximity to
 				// suggest it's the same line
 				cumulLen += targetLines[x].length;
-				if (troubleshoot) System.out.println("Expanded to " + Double.toString(cumulLen));
+				if (TROUBLESHOOTING_MODE) System.out.println("Expanded to " + Double.toString(cumulLen));
 				lastAdjVerticalline = targetLines[x].xAvg;
 				
 				// If this happens to be the very first vertical line of the set, initialize that value as well
@@ -1380,18 +1380,18 @@ public class HelloOCV {
 			// Capture the nominal x coordinate
 			nominalVerticalLineX[vLineSet] = (lastAdjVerticalline + firstAdjVerticalline) / 2;
 			
-			if (troubleshoot) System.out.println("The last line is of length " + Double.toString(totalizedVerticalLen[vLineSet]));
-			if (troubleshoot) System.out.println("Its position is roughly " + Double.toString(nominalVerticalLineX[vLineSet]));
+			if (TROUBLESHOOTING_MODE) System.out.println("The last line is of length " + Double.toString(totalizedVerticalLen[vLineSet]));
+			if (TROUBLESHOOTING_MODE) System.out.println("Its position is roughly " + Double.toString(nominalVerticalLineX[vLineSet]));
 		} 
 
 		// Estimate the actual length of the lines identified
 		
-		if (troubleshoot) System.out.println("The number of line sets is " + Integer.toString(vLineSet + 1));
+		if (TROUBLESHOOTING_MODE) System.out.println("The number of line sets is " + Integer.toString(vLineSet + 1));
 		// What do we do if we don't find at least 4 lines
 		if (vLineSet < 3) {
 			throw new Exception("vLineSet is less than 3 (less than 4 vertical lines).");
 		}
-		if (troubleshoot) System.out.println();
+		if (TROUBLESHOOTING_MODE) System.out.println();
 	}
 
 	private static void calcIsSameLine() {
@@ -1419,13 +1419,13 @@ public class HelloOCV {
 					if (xAvgDiff[x] > maxDiffX) {
 						maxDiffX = xAvgDiff[x];
 					}
-					if (troubleshoot) System.out.println("Differential xAvg = " + Double.toString(xAvgDiff[x]));
+					if (TROUBLESHOOTING_MODE) System.out.println("Differential xAvg = " + Double.toString(xAvgDiff[x]));
 				}
 				// Note the xAvg value of the "previous" vertical line
 				lastxAvg = targetLines[x].xAvg;
 			}
 		}
-		if (troubleshoot) System.out.println("The maximum differential was " + Double.toString(maxDiffX) + "\n");
+		if (TROUBLESHOOTING_MODE) System.out.println("The maximum differential was " + Double.toString(maxDiffX) + "\n");
 	}
 
 	private static void outputOverlayedLines(Mat image, TargetLine[] targetLines) {
@@ -1472,9 +1472,9 @@ public class HelloOCV {
 	private static void showImageInfo(Mat image) {
 		pxlWidth = image.width();
 		pxlHeight = image.height();
-		if (troubleshoot) System.out.println("xdim = " + pxlWidth);
-		if (troubleshoot) System.out.println("ydim = " + pxlHeight);
-		if (troubleshoot) System.out.println("Number of lines = " + ocvLineCount + "\n");
+		if (TROUBLESHOOTING_MODE) System.out.println("xdim = " + pxlWidth);
+		if (TROUBLESHOOTING_MODE) System.out.println("ydim = " + pxlHeight);
+		if (TROUBLESHOOTING_MODE) System.out.println("Number of lines = " + ocvLineCount + "\n");
 	}
 }
 
