@@ -35,6 +35,15 @@ public class HelloOCV {
 	private static final double TARGET_WIDTH =  INCH_TGT_WIDE + INCH_GAP_BETW + INCH_TGT_WIDE;	// The width of the target in inches
 	private static final double OK_HL_GAP = 12;
 	private static final double RAD_TO_DEG = 57.29577951; // 360 / 2 / pi()
+	private static final double INITIAL_LO_HUE = 74;
+	private static final double INITIAL_HI_HUE = 96;	// 93.99317406143345;
+	private static final double INITIAL_LO_SATURATION = 45.86330935251798;
+	private static final double INITIAL_HI_SATURATION = 140;	//153;	// 128.80546075085323;
+	private static final double INITIAL_LO_LUMIN = 80.26079136690647;
+	private static final double INITIAL_HI_LUMIN = 163.61774744027304;
+	private static final double HUE_GAP = 14;
+	private static final double SAT_GAP = 65;
+	private static final double LUM_GAP = 35;
 	private static int pxlWidth = 0;
 	private static int pxlHeight = 0;
 	private static int ocvLineCount = 0;
@@ -53,12 +62,6 @@ public class HelloOCV {
 	private static double tanHlfAngleH = Math.tan(Math.toRadians(HALF_FIELD_ANGLE_H));
 	private static double tanHlfAngleV = Math.tan(Math.toRadians(HALF_FIELD_ANGLE_V));
 	private static double dist2Target = 0;	// Calculated distance to the target in inches
-	private static final double INITIAL_LO_HUE = 74;
-	private static final double INITIAL_HI_HUE = 96;	// 93.99317406143345;
-	private static final double INITIAL_LO_SATURATION = 45.86330935251798;
-	private static final double INITIAL_HI_SATURATION = 140;	//153;	// 128.80546075085323;
-	private static final double INITIAL_LO_LUMIN = 80.26079136690647;
-	private static final double INITIAL_HI_LUMIN = 163.61774744027304;
 	private static double loHue = 74;
 	private static double hiHue = 96;	// 93.99317406143345;
 	private static double loSat = 45.86330935251798;
@@ -141,10 +144,10 @@ public class HelloOCV {
 		if (CALIBRATION_MODE) {
 			calibrPass = 0;
 		} else {
-			calibrPass = 99;	// Typically we use 99 to execute one time;
+			calibrPass = 98;	// 98 to execute one time;
 		}
 		
-		do {
+		 while (calibrPass < 99){
 			if (!USE_VIDEO) {
 				
 				// While normally not executed, here's where we choose alternate hue / saturation / luminance values for analysis
@@ -163,7 +166,7 @@ public class HelloOCV {
 			// Moving to continuous mode (or even calibration, some variables will need to be reset
 			initializeForNextImage();
 			
-		} while (calibrPass < 99);
+		}
 			
 		if (USE_VIDEO)
 			camera.release();
@@ -372,11 +375,32 @@ public class HelloOCV {
 				optLoLum = INITIAL_LO_LUMIN;
 				optHiLum = INITIAL_HI_LUMIN;
 			} else {
-				// For all subsequent passes, instantiate the next set in the series
+				// Each calibrPhase makes the range of a value either smaller or bigger
 				if (calibrPhase == 0) {
-					// See if narrowing the low Hue results in results that are better or worse than our best
 					loHue = loHue + 1;
-				} else {
+					hiHue = hiHue - 1;
+				} 
+				else if (calibrPhase == 1) {
+					loHue = loHue - 1;
+					hiHue = hiHue + 1;
+				} 
+				else if (calibrPhase == 2) {
+					loSat = loSat + 1;
+					hiSat = hiSat - 1;
+				} 
+				else if (calibrPhase == 3) {
+					loSat = loSat - 1;
+					hiSat = hiSat + 1;
+				}
+				else if (calibrPhase == 4) {
+					loLum = loLum + 1;
+					hiLum = hiLum - 1;
+				}
+				else if (calibrPhase == 5) {
+					loLum = loLum - 1;
+					hiLum = hiLum + 1;
+				}
+				else {
 					calibrPhase = 99;	// Signaling the end if calibration.  Save the result
 				}
 			}
@@ -398,12 +422,12 @@ public class HelloOCV {
 		if (CALIBRATION_MODE) {
 			calibrScore = 0;
 			if (calibrPass == 0) {
-				atOptLoHue = loHue;
-				atOptHiHue = hiHue;
-				atOptLoSat = loSat;
-				atOptHiSat = hiSat;
-				atOptLoLum = loLum;
-				atOptHiLum = hiLum;
+				optLoHue = loHue;
+				optHiHue = hiHue;
+				optLoSat = loSat;
+				optHiSat = hiSat;
+				optLoLum = loLum;
+				optHiLum = hiLum;
 				atOptVLnGr = vLineSet + 1;
 				atOptLFStErrB = stdErrB;
 				atOptLFStErrT = stdErrT;
@@ -419,8 +443,8 @@ public class HelloOCV {
 				}			
 				
 				
-			} else if (calibrPhase >= 99) {
-
+			} 
+			else if (calibrPhase >= 99) {
 				// Choose an efficient means to repetitively append an analysis file (append here)
 				try(PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter("calibr_data.txt", true)))) {
 					String LineOut;
@@ -445,8 +469,10 @@ public class HelloOCV {
 				}catch (IOException e) {
 				    System.err.println(e);
 				}			
+				calibrPass = 99;
 				
-			} else {
+			}
+			else {
 				// We first need to determine whether the last results were our best results
 				if ((ocvLineCount < atOptLineCount) && (ocvLineCount > 7)) {
 					calibrScore += 50;
@@ -480,7 +506,7 @@ public class HelloOCV {
 			
 			}
 		}
-		if (calibrPass < 100) calibrPass ++;
+		if (calibrPass < 99) calibrPass ++;
 	}
 	
 	private static void findLineFit(Mat image, String[] edgeID, TargetLine[] targetLines) {
