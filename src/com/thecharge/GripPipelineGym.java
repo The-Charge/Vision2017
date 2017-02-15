@@ -61,10 +61,10 @@ public class GripPipelineGym /*implements VisionPipeline*/ {
 		findLines(findLinesInput, findLinesOutput);
 
 		// Step Filter_Lines0:
-		ArrayList<Line> filterLinesLines = findLinesOutput;
-		double filterLinesMinLength = 20;
-		double[] filterLinesAngle = {55.03597122302158, 135.7679180887372};
-		filterLines(filterLinesLines, filterLinesMinLength, filterLinesAngle, filterLinesOutput);
+		//ArrayList<Line> filterLinesLines = findLinesOutput;
+		//double filterLinesMinLength = 20;
+		//double[] filterLinesAngle = {55.03597122302158, 135.7679180887372};
+		//filterLines(filterLinesLines, filterLinesMinLength, filterLinesAngle, filterLinesOutput);
 
 	}
 
@@ -87,10 +87,10 @@ public class GripPipelineGym /*implements VisionPipeline*/ {
 	/**
 	 * This method is a generated getter for the output of a Filter_Lines.
 	 * @return ArrayList<Line> output from Filter_Lines.
-	 */
 	public ArrayList<Line> filterLinesOutput() {
 		return filterLinesOutput;
 	}
+	 */
 
 
 	/**
@@ -157,7 +157,6 @@ public class GripPipelineGym /*implements VisionPipeline*/ {
 	 * @param minLength The minimum length of a line to be kept.
 	 * @param angle The minimum and maximum angle of a line to be kept.
 	 * @param outputs The output lines after the filter.
-	 */
 	private void filterLines(List<Line> inputs,double minLength,double[] angle,
 		List<Line> outputs) {
 		outputs = inputs.stream()
@@ -166,6 +165,7 @@ public class GripPipelineGym /*implements VisionPipeline*/ {
 				|| (line.angle() + 180.0 >= angle[0] && line.angle() + 180.0 <= angle[1]))
 				.collect(Collectors.toList());
 	}
+	 */
 
 
 

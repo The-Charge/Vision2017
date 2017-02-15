@@ -24,7 +24,7 @@ import edu.wpi.first.wpilibj.networktables.NetworkTable;
 public class HelloOCV {
 	private static final boolean TROUBLESHOOTING_MODE = false;
 	private static final boolean CALIBRATION_MODE = false;
-	private static final boolean USE_VIDEO = false;
+	private static final boolean USE_VIDEO = true;
 	private static final double INCH_GAP_BETW = 6.25; // Distance between reflective targets
 	private static final double INCH_TGT_WIDE = 2; // Width of the reflective target
 	private static final double INCH_TGT_HEIGHT = 5; // Height of the reflective target
@@ -163,7 +163,7 @@ public class HelloOCV {
 			// Moving to continuous mode (or even calibration, some variables will need to be reset
 			initializeForNextImage();
 			
-		} while (calibrPass < 99);
+		} while ((calibrPass < 99) || (USE_VIDEO));
 			
 		if (USE_VIDEO)
 			camera.release();
@@ -180,65 +180,72 @@ public class HelloOCV {
 		// the specified image processing class
 		ArrayList<Line> lines = gp.findLinesOutput();
 		
+		// Continue processing only if we're getting an image
 		ocvLineCount = lines.size();
-		showImageInfo(image);
-		
-		double[] xAvgDiff = new double[ocvLineCount];
-		String[] edgeID = new String[ocvLineCount];
-
-		// Initialize the string array
-		for (int x = 0; x < ocvLineCount; x++) {
-			edgeID[x] = "";
+		if (ocvLineCount > 3) {
+			showImageInfo(image);
+			
+			double[] xAvgDiff = new double[ocvLineCount];
+			String[] edgeID = new String[ocvLineCount];
+	
+			// Initialize the string array
+			for (int x = 0; x < ocvLineCount; x++) {
+				edgeID[x] = "";
+			}
+	
+			TargetLine[] targetLines = new TargetLine[ocvLineCount];
+	
+			// Create a list of line parameters that we need to sort as a group,
+			// like a row of values in a spreadsheet
+			for (int x = 0; x < ocvLineCount; x++) {
+				Line currentLine = gp.findLinesOutput().get(x);
+				targetLines[x] = new TargetLine(currentLine);
+			}
+	
+			sortTargetlinesX(targetLines);
+			exportLineData(targetLines);
+			outputOverlayedLines(image, targetLines);
+			calcXAvgDiff(xAvgDiff, targetLines);
+			
+			// Sum the line lengths for grouped lines
+	
+			calcIsSameLine();
+	
+			double[] totalizedVerticalLen = new double[ocvLineCount]; // An array of totalized line lengths, though we expect fewer entries than allocated
+			double[] nominalVerticalLineX = new double[ocvLineCount]; // Nominal x coordinate of the particular vertical line
+	
+			groupVerticalLines(xAvgDiff, targetLines, totalizedVerticalLen, nominalVerticalLineX);
+			
+			// Find the longest contiguous chain of lines for each vertical line group identified
+			double[] yMinVerticalLine = new double[ocvLineCount]; // Minimum y coordinate of the particular vertical line
+			double[] yMaxVerticalLine = new double[ocvLineCount]; // Maximum y coordinate of the particular vertical line
+			double[] yMinVerticalLineSet = new double[ocvLineCount]; // Minimum y coordinate of the particular vertical line set
+			double[] yMaxVerticalLineSet = new double[ocvLineCount]; // Maximum y coordinate of the particular vertical line set
+			
+			findLongestContiguousVLines(targetLines, nominalVerticalLineX, yMinVerticalLine, yMaxVerticalLine, yMinVerticalLineSet, yMaxVerticalLineSet);
+			findFourBestVLines(totalizedVerticalLen, nominalVerticalLineX);
+			
+			// Find the horizontal lines of the targets
+			double[] xMinHorizontalLine = new double[ocvLineCount]; // Minimum y coordinate of the particular vertical line
+			double[] xMaxHorizontalLine = new double[ocvLineCount]; // Maximum y coordinate of the particular vertical line
+			double[] xMinHorizontalLineSet = new double[ocvLineCount]; // Minimum y coordinate of the particular vertical line set
+			double[] xMaxHorizontalLineSet = new double[ocvLineCount]; // Maximum y coordinate of the particular vertical line set
+			
+			findHorizontalLines(edgeID, targetLines, nominalVerticalLineX, yMinVerticalLineSet, yMaxVerticalLineSet, xMinHorizontalLine, xMaxHorizontalLine, xMinHorizontalLineSet, xMaxHorizontalLineSet);
+			generateGripImage(gp);
+			findLineFit(image, edgeID, targetLines);
+			saveLineData(xAvgDiff, edgeID, targetLines, totalizedVerticalLen, nominalVerticalLineX, yMinVerticalLineSet, yMaxVerticalLineSet, xMinHorizontalLineSet, xMaxHorizontalLineSet);
+			printLineFit();
+			calcAngOfIncR();
+			calcTargetDistance();
+			
+			// For the case where we want to analyze a series of tuning choices, record the results to a file
+			recordAnalysisResults();
+		} else {
+			dist2Target = 0;
+			angOfIncT = 0;
+			angOfIncR = 0;
 		}
-
-		TargetLine[] targetLines = new TargetLine[ocvLineCount];
-
-		// Create a list of line parameters that we need to sort as a group,
-		// like a row of values in a spreadsheet
-		for (int x = 0; x < ocvLineCount; x++) {
-			Line currentLine = gp.findLinesOutput().get(x);
-			targetLines[x] = new TargetLine(currentLine);
-		}
-
-		sortTargetlinesX(targetLines);
-		exportLineData(targetLines);
-		outputOverlayedLines(image, targetLines);
-		calcXAvgDiff(xAvgDiff, targetLines);
-		
-		// Sum the line lengths for grouped lines
-
-		calcIsSameLine();
-
-		double[] totalizedVerticalLen = new double[ocvLineCount]; // An array of totalized line lengths, though we expect fewer entries than allocated
-		double[] nominalVerticalLineX = new double[ocvLineCount]; // Nominal x coordinate of the particular vertical line
-
-		groupVerticalLines(xAvgDiff, targetLines, totalizedVerticalLen, nominalVerticalLineX);
-		
-		// Find the longest contiguous chain of lines for each vertical line group identified
-		double[] yMinVerticalLine = new double[ocvLineCount]; // Minimum y coordinate of the particular vertical line
-		double[] yMaxVerticalLine = new double[ocvLineCount]; // Maximum y coordinate of the particular vertical line
-		double[] yMinVerticalLineSet = new double[ocvLineCount]; // Minimum y coordinate of the particular vertical line set
-		double[] yMaxVerticalLineSet = new double[ocvLineCount]; // Maximum y coordinate of the particular vertical line set
-		
-		findLongestContiguousVLines(targetLines, nominalVerticalLineX, yMinVerticalLine, yMaxVerticalLine, yMinVerticalLineSet, yMaxVerticalLineSet);
-		findFourBestVLines(totalizedVerticalLen, nominalVerticalLineX);
-		
-		// Find the horizontal lines of the targets
-		double[] xMinHorizontalLine = new double[ocvLineCount]; // Minimum y coordinate of the particular vertical line
-		double[] xMaxHorizontalLine = new double[ocvLineCount]; // Maximum y coordinate of the particular vertical line
-		double[] xMinHorizontalLineSet = new double[ocvLineCount]; // Minimum y coordinate of the particular vertical line set
-		double[] xMaxHorizontalLineSet = new double[ocvLineCount]; // Maximum y coordinate of the particular vertical line set
-		
-		findHorizontalLines(edgeID, targetLines, nominalVerticalLineX, yMinVerticalLineSet, yMaxVerticalLineSet, xMinHorizontalLine, xMaxHorizontalLine, xMinHorizontalLineSet, xMaxHorizontalLineSet);
-		generateGripImage(gp);
-		findLineFit(image, edgeID, targetLines);
-		saveLineData(xAvgDiff, edgeID, targetLines, totalizedVerticalLen, nominalVerticalLineX, yMinVerticalLineSet, yMaxVerticalLineSet, xMinHorizontalLineSet, xMaxHorizontalLineSet);
-		printLineFit();
-		calcAngOfIncR();
-		calcTargetDistance();
-		
-		// For the case where we want to analyze a series of tuning choices, record the results to a file
-		recordAnalysisResults();
 	}
 
 	private static void calcAngOfIncR() {
