@@ -159,7 +159,9 @@ public class HelloOCV {
 			
 			// Having selected a source, process the image (this is the dominant call)
 			processSingleImage(image);
-			table2Rbt.putNumber("Distance", dist2Target);
+			//table2Rbt.putNumber("ImageCount", );
+			//table2Rbt.putNumber("Quality", calibrScore);
+			//table2Rbt.putNumber("Distance", dist2Target);
 			// Moving to continuous mode (or even calibration, some variables will need to be reset
 			initializeForNextImage();
 			
