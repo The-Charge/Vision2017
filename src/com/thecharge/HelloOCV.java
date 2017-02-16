@@ -24,9 +24,9 @@ import com.thecharge.GripPipelineGym.Line;
 import edu.wpi.first.wpilibj.networktables.NetworkTable;
 
 public class HelloOCV {
-	private static final boolean TROUBLESHOOTING_MODE = false;
+	private static final boolean TROUBLESHOOTING_MODE = true;
 	private static final boolean CALIBRATION_MODE = false;
-	private static final boolean USE_VIDEO = true;
+	private static final boolean USE_VIDEO = false;
 	private static final double INCH_GAP_BETW = 6.25; // Distance between reflective targets
 	private static final double INCH_TGT_WIDE = 2; // Width of the reflective target
 	private static final double INCH_TGT_HEIGHT = 5; // Height of the reflective target
@@ -55,18 +55,18 @@ public class HelloOCV {
 	private static double tanHlfAngleH = Math.tan(Math.toRadians(HALF_FIELD_ANGLE_H));
 	private static double tanHlfAngleV = Math.tan(Math.toRadians(HALF_FIELD_ANGLE_V));
 	private static double dist2Target = 0;	// Calculated distance to the target in inches
-	private static final double INITIAL_LO_HUE = 74;
-	private static final double INITIAL_HI_HUE = 96;	// 93.99317406143345;
-	private static final double INITIAL_LO_SATURATION = 45.86330935251798;
-	private static final double INITIAL_HI_SATURATION = 140;	//153;	// 128.80546075085323;
-	private static final double INITIAL_LO_LUMIN = 80.26079136690647;
-	private static final double INITIAL_HI_LUMIN = 163.61774744027304;
-	private static double loHue = 63;	// 81 from optimization;
-	private static double hiHue = 91;	// 93.99317406143345;
-	private static double loSat = 2;	// 45.86330935251798;
-	private static double hiSat = 255;	// 140;	//153;	// 128.80546075085323;
-	private static double loLum = 103;	// 80.26079136690647;
-	private static double hiLum = 222;	// 163.61774744027304;
+	private static final double INITIAL_LO_HUE = 73;		//74;
+	private static final double INITIAL_HI_HUE = 103;	//96;	// 93.99317406143345;
+	private static final double INITIAL_LO_SATURATION = 14;	//40;	//45.86330935251798;
+	private static final double INITIAL_HI_SATURATION = 255;	//140;	//153;	// 128.80546075085323;
+	private static final double INITIAL_LO_LUMIN = 135;	//80.26079136690647;
+	private static final double INITIAL_HI_LUMIN = 235;	//163.61774744027304;
+	private static double loHue = 0;	// 81 from optimization;
+	private static double hiHue = 0;	// 93.99317406143345;
+	private static double loSat = 0;	// 45.86330935251798;
+	private static double hiSat = 0;	// 140;	//153;	// 128.80546075085323;
+	private static double loLum = 0;	// 80.26079136690647;
+	private static double hiLum = 0;	// 163.61774744027304;
 	private static double lastxAvg = 0;
 	private static double maxDiffX = 0;
 	private static double isSameLine = 0; // Pixels between vertical lines to still consider associated
@@ -138,21 +138,48 @@ public class HelloOCV {
 				System.out.println("The camera didn't open.");
 				throw new Exception("Can't open the camera.");
 	    	}
-	    	camera.set(Videoio.CAP_PROP_BRIGHTNESS, 66);	// 66
-	    	camera.set(Videoio.CAP_PROP_CONTRAST, 32);		// 32
-	    	camera.set(Videoio.CAP_PROP_EXPOSURE, -1); 	// -1
-	    	camera.set(Videoio.CAP_PROP_GAIN, 44);			// 44
-	    	camera.set(Videoio.CAP_PROP_SATURATION, 255);			// 255
-	    	camera.set(Videoio.CAP_PROP_WHITE_BALANCE_BLUE_U, 6500);		//6500
-	    	camera.set(Videoio.CAP_PROP_WHITE_BALANCE_RED_V, 6500);		//6500
+	    	double camSetting = 0;
+	    	//5 - CV_CAP_PROP_FPS Frame rate.
+	    	camSetting = camera.get(Videoio.CAP_PROP_APERTURE);		//-1
+	    	camSetting = camera.get(Videoio.CAP_PROP_AUTOFOCUS);	//-1
+	    	camSetting = camera.get(Videoio.CAP_PROP_FPS);			//0
+	    	camSetting = camera.get(Videoio.CAP_PROP_FRAME_HEIGHT);	//480
+	    	camSetting = camera.get(Videoio.CAP_PROP_FRAME_WIDTH);	//640
+	    	camSetting = camera.get(Videoio.CAP_PROP_CONVERT_RGB);	//-1
+	    	
+	    	
+	    	camSetting = camera.get(Videoio.CAP_PROP_BRIGHTNESS);	//-1  
+	    	camera.set(Videoio.CAP_PROP_BRIGHTNESS, 66);	// 142, 32, 73 // 66  //10 - CV_CAP_PROP_BRIGHTNESS Brightness of the image (only for cameras).
+	    	
+	    	camSetting = camera.get(Videoio.CAP_PROP_CONTRAST);	//-1  
+	    	camera.set(Videoio.CAP_PROP_CONTRAST, 32);		// 66, 128, 42, 32  //11 - CV_CAP_PROP_CONTRAST Contrast of the image (only for cameras).
+	    	
+	    	camSetting = camera.get(Videoio.CAP_PROP_EXPOSURE);	//-1  
+	    	camera.set(Videoio.CAP_PROP_EXPOSURE, -1); 	// -2 -3 -2, -1  // 15 - CV_CAP_PROP_EXPOSURE Exposure (only for cameras).
+	    	
+	    	camSetting = camera.get(Videoio.CAP_PROP_GAIN);	//-1  
+	    	camera.set(Videoio.CAP_PROP_GAIN, 44);			// 9, 40, 9, 44  // 14 - CV_CAP_PROP_GAIN Gain of the image (only for cameras).
+	    	
+	    	camSetting = camera.get(Videoio.CAP_PROP_SATURATION);	//-1  
+	    	camera.set(Videoio.CAP_PROP_SATURATION, 255);			// 209, 186, 35, 255 // 12 - CV_CAP_PROP_SATURATION Saturation of the image (only for cameras).
+	    	
+	    	camSetting = camera.get(Videoio.CAP_PROP_WHITE_BALANCE_BLUE_U);	//-1  
+	    	camera.set(Videoio.CAP_PROP_WHITE_BALANCE_BLUE_U, 6500);		//2800, 6500
+	    	
+	    	camSetting = camera.get(Videoio.CAP_PROP_WHITE_BALANCE_RED_V);	//-1  
+	    	camera.set(Videoio.CAP_PROP_WHITE_BALANCE_RED_V, 6500);		//-1, 6500
 	    	//camera.set(Videoio.CAP_PROP_CONTRAST, .15);
+	    	
+	    	camSetting = camera.get(Videoio.CAP_PROP_HUE);	//-1  
+	    	camera.set(Videoio.CAP_PROP_HUE, 4.04987E7);	// 4.3513e7, 3.84e7, //13 - CV_CAP_PROP_HUE Hue of the image (only for cameras).
+	    	
 		}
 		
 		//Network Table Setup
-		NetworkTable.setClientMode();
+		//NetworkTable.setClientMode();
 		//NetworkTable.setIPAddress("127.0.0.1");
-		NetworkTable.setIPAddress("10.26.19.2");
-		NetworkTable table2Rbt = NetworkTable.getTable("Vision");
+		//NetworkTable.setIPAddress("10.26.19.2");
+		//NetworkTable table2Rbt = NetworkTable.getTable("Vision");
 		
 		if (CALIBRATION_MODE) {
 			calibrPass = 0;
@@ -177,17 +204,18 @@ public class HelloOCV {
 			processSingleImage(image);
 			
 			// Having concluded analysis, update the Network Tables
-			table2Rbt.putNumber("Distance", dist2Target/12);
-			table2Rbt.putNumber("RobotAngle", angOfIncR);
-			table2Rbt.putNumber("TargetAngle", angOfIncT);
-			table2Rbt.putNumber("Quality", imageQuality);
-			table2Rbt.putNumber("ImageCount", executionCount);
+			//table2Rbt.putNumber("Distance", dist2Target/12);
+			//table2Rbt.putNumber("RobotAngle", angOfIncR);
+			//table2Rbt.putNumber("TargetAngle", angOfIncT);
+			//table2Rbt.putNumber("Quality", imageQuality);
+			//table2Rbt.putNumber("ImageCount", executionCount);
 			
 			// Moving to continuous mode (or even calibration, some variables will need to be reset
 			initializeForNextImage();
 			executionCount ++;
 			
-		} while ((calibrPass < 99) || (USE_VIDEO));
+		//} while ((calibrPass < 99) || (USE_VIDEO));
+		} while (executionCount < 1);
 			
 		if (USE_VIDEO)
 			camera.release();
@@ -195,10 +223,13 @@ public class HelloOCV {
 
 	private static void processSingleImage(Mat image) throws IOException, Exception {
 
+		if (TROUBLESHOOTING_MODE) Imgcodecs.imwrite("OriginalImage.jpg", image);
+
 		// Using the class Pipeline, instantiate here with the specified image
 		// (replicate the class here)
 		GripPipelineGym gp = new GripPipelineGym();
 		gp.process(image, loHue, hiHue, loSat, hiSat, loLum, hiLum);
+
 
 		// Create a List (special Java Collection) of "line" type entries from
 		// the specified image processing class
@@ -380,7 +411,9 @@ public class HelloOCV {
 
 	private static void selectNextParameterSet() {
 		
-		jpgFile = new String("LTGym3ft.jpg");
+		jpgFile = new String("Picture 6.jpg");
+		//jpgFile = new String("OriginalImage.jpg");
+		//jpgFile = new String("LTGym3ft.jpg");
 		//String jpgFile = new String("LTGym6f45d.jpg");
 		//String jpgFile = new String("LTGym6f70d.jpg");
 		//String jpgFile = new String("LTGym8ft.jpg");
@@ -909,7 +942,7 @@ public class HelloOCV {
 
 	private static void generateGripImage(GripPipelineGym gp) {
 		// Put the generated image back out to a file
-		Imgcodecs.imwrite("RDW2619.jpg", gp.hslThresholdOutput());
+		Imgcodecs.imwrite("HSLOutputFile.jpg", gp.hslThresholdOutput());
 	}
 
 	private static void findHorizontalLines(String[] edgeID, TargetLine[] targetLines, double[] nominalVerticalLineX,

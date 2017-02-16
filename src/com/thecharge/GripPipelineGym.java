@@ -30,7 +30,7 @@ public class GripPipelineGym /*implements VisionPipeline*/ {
 	//Outputs
 	private Mat hslThresholdOutput = new Mat();
 	private ArrayList<Line> findLinesOutput = new ArrayList<Line>();
-	private ArrayList<Line> filterLinesOutput = new ArrayList<Line>();
+	//private ArrayList<Line> filterLinesOutput = new ArrayList<Line>();
 
 	static {
 		System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
@@ -43,18 +43,15 @@ public class GripPipelineGym /*implements VisionPipeline*/ {
 	public void process(Mat source0, double loHue, double hiHue, double loSat, double hiSat, double loLum, double hiLum) {
 		// Step HSL_Threshold0:
 		Mat hslThresholdInput = source0;
-		//final double loHue = 74;	// 74.46043165467626;
-		//final double hiHue = 96;	// 93.99317406143345;
-		//final double loSat = 45.86330935251798;
-		//final double hiSat = 140;	//153;	// 128.80546075085323;
-		//final double loLum = 80.26079136690647;
-		//final double hiLum = 163.61774744027304;
 		
 		double[] hslThresholdHue = {loHue, hiHue};
 		double[] hslThresholdSaturation = {loSat, hiSat};
 		double[] hslThresholdLuminance = {loLum, hiLum};
 		
 		hslThreshold(hslThresholdInput, hslThresholdHue, hslThresholdSaturation, hslThresholdLuminance, hslThresholdOutput);
+
+		// Save the output of the HSL processing
+		Imgcodecs.imwrite("HSL_Output_Image.jpg", hslThresholdOutput);
 
 		// Step Find_Lines0:
 		Mat findLinesInput = hslThresholdOutput;
