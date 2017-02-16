@@ -59,7 +59,7 @@ public class HelloOCV {
 	private static final double INITIAL_HI_SATURATION = 140;	//153;	// 128.80546075085323;
 	private static final double INITIAL_LO_LUMIN = 80.26079136690647;
 	private static final double INITIAL_HI_LUMIN = 163.61774744027304;
-	private static double loHue = 74;
+	private static double loHue = 81;
 	private static double hiHue = 96;	// 93.99317406143345;
 	private static double loSat = 45.86330935251798;
 	private static double hiSat = 140;	//153;	// 128.80546075085323;
@@ -106,18 +106,22 @@ public class HelloOCV {
 	private static double optLoLum = 0;
 	private static double optHiLum = 0;
 	private static double atOptLineCount = 0;	//  The ocvLineCount value at the optimum tuning
-	private static double atOptLoHue = 0;
-	private static double atOptHiHue = 0;
-	private static double atOptLoSat = 0;
-	private static double atOptHiSat = 0;
-	private static double atOptLoLum = 0;
-	private static double atOptHiLum = 0;
+	//private static double atOptLoHue = 0;
+	//private static double atOptHiHue = 0;
+	//private static double atOptLoSat = 0;
+	//private static double atOptHiSat = 0;
+	//private static double atOptLoLum = 0;
+	//private static double atOptHiLum = 0;
 	private static double atOptVLnGr = 0;
 	private static double atOptLFStErrB = 0;
 	private static double atOptLFStErrT = 0;
 	private static double atOptLTgtWdAccr = 0;
 	private static double atOptRTgtWdAccr = 0;
 	private static String jpgFile = "";
+	private static double imageQuality = 0;
+	private static double optimumQuality = 0;
+	private static double lastScore = 0;
+	private static long executionCount = 0;
 	
 	
 	public static void main(String[] args) throws Exception {
@@ -127,15 +131,16 @@ public class HelloOCV {
 		VideoCapture camera = null;
 		
 		if (USE_VIDEO) {
-			camera = new VideoCapture(1);
+			camera = new VideoCapture(0);
 	    	if(!camera.isOpened()){
 				throw new Exception("Can't open the camera.");
 	    	}
 		}
 		
-		//Network Table Code
+		//Network Table Setup
 		NetworkTable.setClientMode();
-		NetworkTable.setIPAddress("127.0.0.1");
+		//NetworkTable.setIPAddress("127.0.0.1");
+		NetworkTable.setIPAddress("10.26.19.2");
 		NetworkTable table2Rbt = NetworkTable.getTable("Distance");
 		
 		if (CALIBRATION_MODE) {
@@ -159,9 +164,17 @@ public class HelloOCV {
 			
 			// Having selected a source, process the image (this is the dominant call)
 			processSingleImage(image);
+			
+			// Having concluded analysis, update the Network Tables
 			table2Rbt.putNumber("Distance", dist2Target);
+			table2Rbt.putNumber("RobotAngle", angOfIncR);
+			table2Rbt.putNumber("TargetAngle", angOfIncT);
+			table2Rbt.putNumber("Quality", imageQuality);
+			table2Rbt.putNumber("ImageCount", executionCount);
+			
 			// Moving to continuous mode (or even calibration, some variables will need to be reset
 			initializeForNextImage();
+			executionCount ++;
 			
 		} while ((calibrPass < 99) || (USE_VIDEO));
 			
@@ -241,10 +254,12 @@ public class HelloOCV {
 			
 			// For the case where we want to analyze a series of tuning choices, record the results to a file
 			recordAnalysisResults();
+			
 		} else {
 			dist2Target = 0;
 			angOfIncT = 0;
 			angOfIncR = 0;
+			imageQuality = 0;
 		}
 	}
 
@@ -384,6 +399,21 @@ public class HelloOCV {
 					
 					// See if narrowing the low Hue results in results that are better or worse than our best
 					loHue = loHue + 1;
+				} else if (calibrPhase == 1) {
+					
+					// See if expanding the low Hue results in results that are better or worse than our best
+					if (loHue > INITIAL_LO_HUE) {
+						loHue = INITIAL_LO_HUE - 1;
+					} else {
+						loHue -= 1;
+					}
+				} else if (calibrPhase == 2) {
+					
+					// See if expanding the high Hue results in results that are better or worse than our best
+					if (loHue < INITIAL_LO_HUE) {
+						loHue = INITIAL_LO_HUE;
+					} 
+					hiHue -= 1;
 				} else {
 					calibrPhase = 99;	// Signaling the end if calibration.  Save the result
 				}
@@ -403,15 +433,45 @@ public class HelloOCV {
 	}
 	private static void recordAnalysisResults() throws IOException {
 		// Here we record the quality of the analysis from the most recent image analysis
+		imageQuality = 0;
+		
+		if (ocvLineCount > 8) {
+			if (ocvLineCount < 50) {
+				imageQuality += 0.3;
+			} else {
+				imageQuality += 0.1;
+			}
+		}
+		
+		if (vLineSet == 3) {
+			imageQuality += 0.6;
+		} else if (vLineSet == 4) {
+			imageQuality += 0.45;
+		} else if (vLineSet == 5) {
+			imageQuality += 0.3;
+		} else if (vLineSet == 6) {
+			imageQuality += 0.2;
+		} else if (vLineSet == 7) {
+			imageQuality += 0.1;
+		}
+		
+		imageQuality -= (stdErrT / 3);
+		imageQuality -= (stdErrB / 4);
+		
+		imageQuality -= (lTgtAccrW - 1);
+		imageQuality -= (rTgtAccrW - 1);
+		
+		if (imageQuality < 0) {
+			imageQuality = 0;
+		}
+		
+		if (imageQuality > 1) {
+			imageQuality = 1;
+		}
+		
 		if (CALIBRATION_MODE) {
-			calibrScore = 0;
+			calibrScore = imageQuality;
 			if (calibrPass == 0) {
-				atOptLoHue = loHue;
-				atOptHiHue = hiHue;
-				atOptLoSat = loSat;
-				atOptHiSat = hiSat;
-				atOptLoLum = loLum;
-				atOptHiLum = hiLum;
 				atOptVLnGr = vLineSet + 1;
 				atOptLFStErrB = stdErrB;
 				atOptLFStErrT = stdErrT;
@@ -455,9 +515,21 @@ public class HelloOCV {
 				}			
 				
 			} else {
-				// We first need to determine whether the last results were our best results
-				if ((ocvLineCount < atOptLineCount) && (ocvLineCount > 7)) {
-					calibrScore += 50;
+
+				if (imageQuality > optimumQuality) {
+					optimumQuality = imageQuality;
+					optLoHue = loHue;
+					optHiHue = hiHue;
+					optLoSat = loSat;
+					optHiSat = hiSat;
+					optLoLum = loLum;
+					optHiLum = hiLum;
+					atOptVLnGr = vLineSet + 1;
+					atOptLFStErrB = stdErrB;
+					atOptLFStErrT = stdErrT;
+					atOptLTgtWdAccr = lTgtAccrW;
+					atOptRTgtWdAccr = rTgtAccrW;
+					atOptLineCount = ocvLineCount;
 				}
 
 				// Choose an efficient means to repetitively append an analysis file (append here)
@@ -487,8 +559,25 @@ public class HelloOCV {
 
 			
 			}
+			// As a last step in the calibration pass, determine when we go to the next calibration phase
+			if (calibrPass == 1) {
+				lastScore = imageQuality;
+			} else {
+				if (imageQuality < lastScore) {
+					calibrPhase ++;
+					lastScore = 0;
+				} else {
+					lastScore = imageQuality;
+				}
+			}
+			
+			if ((calibrPhase == 1) && (loHue <= 1)) {
+				calibrPhase ++;
+				lastScore = 0;
+			}
+			
+			if (calibrPass < 100) calibrPass ++;
 		}
-		if (calibrPass < 100) calibrPass ++;
 	}
 	
 	private static void findLineFit(Mat image, String[] edgeID, TargetLine[] targetLines) {
