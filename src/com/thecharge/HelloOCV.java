@@ -14,8 +14,10 @@ import org.opencv.core.Mat;
 import org.opencv.core.Scalar;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
+import org.opencv.video.Video;
 import org.opencv.videoio.VideoCapture;
 import org.opencv.core.Point;
+import org.opencv.videoio.Videoio;
 
 import com.thecharge.GripPipelineGym.Line;
 
@@ -59,12 +61,12 @@ public class HelloOCV {
 	private static final double INITIAL_HI_SATURATION = 140;	//153;	// 128.80546075085323;
 	private static final double INITIAL_LO_LUMIN = 80.26079136690647;
 	private static final double INITIAL_HI_LUMIN = 163.61774744027304;
-	private static double loHue = 73;	// 81 from optimization;
-	private static double hiHue = 108;	// 93.99317406143345;
-	private static double loSat = 0;	// 45.86330935251798;
-	private static double hiSat = 103;	// 140;	//153;	// 128.80546075085323;
-	private static double loLum = 92;	// 80.26079136690647;
-	private static double hiLum = 207;	// 163.61774744027304;
+	private static double loHue = 63;	// 81 from optimization;
+	private static double hiHue = 91;	// 93.99317406143345;
+	private static double loSat = 2;	// 45.86330935251798;
+	private static double hiSat = 255;	// 140;	//153;	// 128.80546075085323;
+	private static double loLum = 103;	// 80.26079136690647;
+	private static double hiLum = 222;	// 163.61774744027304;
 	private static double lastxAvg = 0;
 	private static double maxDiffX = 0;
 	private static double isSameLine = 0; // Pixels between vertical lines to still consider associated
@@ -131,11 +133,19 @@ public class HelloOCV {
 		VideoCapture camera = null;
 		
 		if (USE_VIDEO) {
-			camera = new VideoCapture(0);
+			camera = new VideoCapture(1);
 	    	if(!camera.isOpened()){
 				System.out.println("The camera didn't open.");
 				throw new Exception("Can't open the camera.");
 	    	}
+	    	camera.set(Videoio.CAP_PROP_BRIGHTNESS, 66);	// 66
+	    	camera.set(Videoio.CAP_PROP_CONTRAST, 32);		// 32
+	    	camera.set(Videoio.CAP_PROP_EXPOSURE, -1); 	// -1
+	    	camera.set(Videoio.CAP_PROP_GAIN, 44);			// 44
+	    	camera.set(Videoio.CAP_PROP_SATURATION, 255);			// 255
+	    	camera.set(Videoio.CAP_PROP_WHITE_BALANCE_BLUE_U, 6500);		//6500
+	    	camera.set(Videoio.CAP_PROP_WHITE_BALANCE_RED_V, 6500);		//6500
+	    	//camera.set(Videoio.CAP_PROP_CONTRAST, .15);
 		}
 		
 		//Network Table Setup
