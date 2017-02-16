@@ -59,12 +59,12 @@ public class HelloOCV {
 	private static final double INITIAL_HI_SATURATION = 140;	//153;	// 128.80546075085323;
 	private static final double INITIAL_LO_LUMIN = 80.26079136690647;
 	private static final double INITIAL_HI_LUMIN = 163.61774744027304;
-	private static double loHue = 81;
-	private static double hiHue = 96;	// 93.99317406143345;
-	private static double loSat = 45.86330935251798;
-	private static double hiSat = 140;	//153;	// 128.80546075085323;
-	private static double loLum = 80.26079136690647;
-	private static double hiLum = 163.61774744027304;
+	private static double loHue = 73;	// 81 from optimization;
+	private static double hiHue = 108;	// 93.99317406143345;
+	private static double loSat = 0;	// 45.86330935251798;
+	private static double hiSat = 103;	// 140;	//153;	// 128.80546075085323;
+	private static double loLum = 92;	// 80.26079136690647;
+	private static double hiLum = 207;	// 163.61774744027304;
 	private static double lastxAvg = 0;
 	private static double maxDiffX = 0;
 	private static double isSameLine = 0; // Pixels between vertical lines to still consider associated
@@ -133,6 +133,7 @@ public class HelloOCV {
 		if (USE_VIDEO) {
 			camera = new VideoCapture(0);
 	    	if(!camera.isOpened()){
+				System.out.println("The camera didn't open.");
 				throw new Exception("Can't open the camera.");
 	    	}
 		}
@@ -141,7 +142,7 @@ public class HelloOCV {
 		NetworkTable.setClientMode();
 		//NetworkTable.setIPAddress("127.0.0.1");
 		NetworkTable.setIPAddress("10.26.19.2");
-		NetworkTable table2Rbt = NetworkTable.getTable("Distance");
+		NetworkTable table2Rbt = NetworkTable.getTable("Vision");
 		
 		if (CALIBRATION_MODE) {
 			calibrPass = 0;
@@ -166,7 +167,7 @@ public class HelloOCV {
 			processSingleImage(image);
 			
 			// Having concluded analysis, update the Network Tables
-			table2Rbt.putNumber("Distance", dist2Target);
+			table2Rbt.putNumber("Distance", dist2Target/12);
 			table2Rbt.putNumber("RobotAngle", angOfIncR);
 			table2Rbt.putNumber("TargetAngle", angOfIncT);
 			table2Rbt.putNumber("Quality", imageQuality);
@@ -1129,7 +1130,8 @@ public class HelloOCV {
 			if (TROUBLESHOOTING_MODE) System.out.println("Best weighted value : " + Double.toString(bestWt));
 			
 			if (bestWt == 0) {
-				throw new Exception("vLineSet is perhaps greater than 4 and handling logic is required.");
+				System.out.println("No definitive target found.");
+				//throw new Exception("vLineSet is perhaps greater than 4 and handling logic is required.");
 			}
 			if (TROUBLESHOOTING_MODE) System.out.println("Selecting verticals : " + Integer.toString(vertSel[0]) + ":" + Integer.toString(vertSel[1]) + ":" + Integer.toString(vertSel[2]) + ":" + Integer.toString(vertSel[3]));
 			tgt1LeftXPtr = vertSel[0];
