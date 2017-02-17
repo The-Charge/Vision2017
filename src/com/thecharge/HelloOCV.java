@@ -22,7 +22,7 @@ import com.thecharge.GripPipelineGym.Line;
 import edu.wpi.first.wpilibj.networktables.NetworkTable;
 
 public class HelloOCV {
-	private static final boolean TROUBLESHOOTING_MODE = false;
+	private static final boolean TROUBLESHOOTING_MODE = true;
 	private static final boolean CALIBRATION_MODE = false;
 	private static final boolean USE_VIDEO = false;
 	private static final double INCH_GAP_BETW = 6.25; // Distance between reflective targets
@@ -376,29 +376,41 @@ public class HelloOCV {
 				optHiLum = INITIAL_HI_LUMIN;
 			} else {
 				// Each calibrPhase makes the range of a value either smaller or bigger
-				if (calibrPhase == 0) {
-					loHue = loHue + 1;
-					hiHue = hiHue - 1;
-				} 
+				if (calibrPhase == 0)
+					loHue++;
 				else if (calibrPhase == 1) {
-					loHue = loHue - 1;
-					hiHue = hiHue + 1;
-				} 
-				else if (calibrPhase == 2) {
-					loSat = loSat + 1;
-					hiSat = hiSat - 1;
-				} 
+					loHue--;
+					calibrPhase++;
+				}
+				else if (calibrPhase == 2)
+					hiHue--;
 				else if (calibrPhase == 3) {
-					loSat = loSat - 1;
-					hiSat = hiSat + 1;
+					hiHue++;
+					calibrPhase++;
 				}
-				else if (calibrPhase == 4) {
-					loLum = loLum + 1;
-					hiLum = hiLum - 1;
-				}
+				else if (calibrPhase == 4)
+					loSat++;
 				else if (calibrPhase == 5) {
-					loLum = loLum - 1;
-					hiLum = hiLum + 1;
+					loSat--;
+					calibrPhase++;
+				}
+				else if (calibrPhase == 6)
+					hiSat--;
+				else if (calibrPhase == 7) {
+					hiSat++;
+					calibrPhase++;
+				}
+				else if (calibrPhase == 8)
+					loLum++;
+				else if (calibrPhase == 9) {
+					loLum--;
+					calibrPhase++;
+				}
+				else if (calibrPhase == 10)
+					hiLum--;
+				else if (calibrPhase == 11) {
+					hiLum++;
+					calibrPhase++;
 				}
 				else {
 					calibrPhase = 99;	// Signaling the end if calibration.  Save the result
