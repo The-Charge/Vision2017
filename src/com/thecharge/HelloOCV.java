@@ -124,7 +124,8 @@ public class HelloOCV {
 	private static double optimumQuality = 0;
 	private static double lastScore = 0;
 	private static long executionCount = 0;
-	
+	private static Mat hslTO;
+
 	
 	public static void main(String[] args) throws Exception {
 		System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
@@ -235,6 +236,11 @@ public class HelloOCV {
 		// the specified image processing class
 		ArrayList<Line> lines = gp.findLinesOutput();
 		
+		
+		
+		
+		
+		
 		// Continue processing only if we're getting an image
 		ocvLineCount = lines.size();
 		if (ocvLineCount > 3) {
@@ -250,13 +256,30 @@ public class HelloOCV {
 	
 			TargetLine[] targetLines = new TargetLine[ocvLineCount];
 	
+			
 			// Create a list of line parameters that we need to sort as a group,
 			// like a row of values in a spreadsheet
 			for (int x = 0; x < ocvLineCount; x++) {
 				Line currentLine = gp.findLinesOutput().get(x);
 				targetLines[x] = new TargetLine(currentLine);
 			}
-	
+
+			
+			
+			Mat temp = gp.hslThresholdOutput();
+			hslTO = new Mat();
+			Imgproc.cvtColor(temp, hslTO, Imgproc.COLOR_GRAY2BGR);
+			
+			for (int x = 0; x < ocvLineCount; x++){
+				Imgproc.line(hslTO, targetLines[x].point1(), targetLines[x].point2(), new Scalar(20,20,200), 3);
+			}
+			// Save a copy of the amended file with the identified lines
+			Imgcodecs.imwrite("HSLout_with_lines.jpg", hslTO);
+
+
+			
+			
+			
 			sortTargetlinesX(targetLines);
 			exportLineData(targetLines);
 			outputOverlayedLines(image, targetLines);
@@ -1196,6 +1219,8 @@ public class HelloOCV {
 		
 		// For each vertical line group, find the longest contiguous series of associated segments (ideally 1 series)
 		for (int x = 0; x <= vLineSet; x++) {
+			Imgproc.line(hslTO, new Point(nominalVerticalLineX[x],0), new Point(nominalVerticalLineX[x],pxlHeight), new Scalar(250,0,255), 1);
+			Imgcodecs.imwrite("HSLout_with_lines2.jpg", hslTO);
 			if (TROUBLESHOOTING_MODE) System.out.println("Evaluating vertical line group " + Integer.toString(x));
 			diffVLCount = 0;
 			// For each original line relating to this line group, append as able
@@ -1459,6 +1484,11 @@ public class HelloOCV {
 					}
 				}
 			}
+			// At least during development, display horizontal lines
+			Imgproc.line(hslTO, new Point(0,yMinVerticalLineSet[x]), new Point(pxlWidth,yMinVerticalLineSet[x]), new Scalar(250,x,255), 1);
+			Imgproc.line(hslTO, new Point(0,yMaxVerticalLineSet[x]), new Point(pxlWidth,yMaxVerticalLineSet[x]), new Scalar(250,x,255), 1);
+			Imgcodecs.imwrite("HSLout_with_lines2.jpg", hslTO);
+
 		}
 		
 		if (TROUBLESHOOTING_MODE) System.out.println();

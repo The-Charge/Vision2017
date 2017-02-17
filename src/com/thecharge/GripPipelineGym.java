@@ -33,6 +33,7 @@ public class GripPipelineGym /*implements VisionPipeline*/ {
 	//private ArrayList<Line> filterLinesOutput = new ArrayList<Line>();
 
 	static {
+		
 		System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
 	}
 
@@ -57,6 +58,8 @@ public class GripPipelineGym /*implements VisionPipeline*/ {
 		Mat findLinesInput = hslThresholdOutput;
 		findLines(findLinesInput, findLinesOutput);
 
+
+		
 		// Step Filter_Lines0:
 		//ArrayList<Line> filterLinesLines = findLinesOutput;
 		//double filterLinesMinLength = 20;
