@@ -27,6 +27,7 @@ public class HelloOCV {
 	private static final boolean TROUBLESHOOTING_MODE = true;
 	private static final boolean CALIBRATION_MODE = false;
 	private static final boolean USE_VIDEO = false;
+	private static final boolean JPGS_TO_C = true;
 	private static final double INCH_GAP_BETW = 6.25; // Distance between reflective targets
 	private static final double INCH_TGT_WIDE = 2; // Width of the reflective target
 	private static final double INCH_TGT_HEIGHT = 5; // Height of the reflective target
@@ -224,7 +225,7 @@ public class HelloOCV {
 
 	private static void processSingleImage(Mat image) throws IOException, Exception {
 
-		if (TROUBLESHOOTING_MODE) Imgcodecs.imwrite("OriginalImage.jpg", image);
+		if (JPGS_TO_C) Imgcodecs.imwrite("OriginalImage.jpg", image);
 
 		// Using the class Pipeline, instantiate here with the specified image
 		// (replicate the class here)
@@ -274,7 +275,7 @@ public class HelloOCV {
 				Imgproc.line(hslTO, targetLines[x].point1(), targetLines[x].point2(), new Scalar(20,20,200), 3);
 			}
 			// Save a copy of the amended file with the identified lines
-			Imgcodecs.imwrite("HSLout_with_lines.jpg", hslTO);
+			if (JPGS_TO_C) Imgcodecs.imwrite("HSLout_with_lines.jpg", hslTO);
 
 
 			
@@ -898,7 +899,7 @@ public class HelloOCV {
 		Imgproc.line(image, ptBR, ptTR, new Scalar(0,0,255), 1);
 
 		// Save a copy of the amended file with the identified lines
-		Imgcodecs.imwrite("img_with_lines.jpg", image);
+		if (JPGS_TO_C) Imgcodecs.imwrite("img_with_lines.jpg", image);
 	}
 
 	private static void calcTargetDistance() {
@@ -965,7 +966,7 @@ public class HelloOCV {
 
 	private static void generateGripImage(GripPipelineGym gp) {
 		// Put the generated image back out to a file
-		Imgcodecs.imwrite("HSLOutputFile.jpg", gp.hslThresholdOutput());
+		if (JPGS_TO_C) Imgcodecs.imwrite("HSLOutputFile.jpg", gp.hslThresholdOutput());
 	}
 
 	private static void findHorizontalLines(String[] edgeID, TargetLine[] targetLines, double[] nominalVerticalLineX,
@@ -1220,13 +1221,16 @@ public class HelloOCV {
 		// For each vertical line group, find the longest contiguous series of associated segments (ideally 1 series)
 		for (int x = 0; x <= vLineSet; x++) {
 			Imgproc.line(hslTO, new Point(nominalVerticalLineX[x],0), new Point(nominalVerticalLineX[x],pxlHeight), new Scalar(250,0,255), 1);
-			Imgcodecs.imwrite("HSLout_with_lines2.jpg", hslTO);
+			if (JPGS_TO_C) Imgcodecs.imwrite("HSLout_with_lines2.jpg", hslTO);
 			if (TROUBLESHOOTING_MODE) System.out.println("Evaluating vertical line group " + Integer.toString(x));
+			if (x == 55) {
+				testY1 = testY2;
+			}
 			diffVLCount = 0;
 			// For each original line relating to this line group, append as able
 			for (int y = 0; y < ocvLineCount; y++) {
 				if (targetLines[y].isVertical()) {
-					if ((targetLines[y].xAvg >= nominalVerticalLineX[x] - isSameLine) && (targetLines[y].xAvg <= nominalVerticalLineX[x] + isSameLine)) {
+					if ((targetLines[y].xAvg >= (nominalVerticalLineX[x] - isSameLine)) && (targetLines[y].xAvg <= (nominalVerticalLineX[x] + isSameLine))) {
 						// At least for now, confirm that we're evaluating all of the appropriate vertical lines
 						if (TROUBLESHOOTING_MODE) System.out.println("Evaluating for grouping vertical line " + Integer.toString(y));
 
@@ -1367,7 +1371,7 @@ public class HelloOCV {
 								} else {
 									// So (testY2 <= ymaxVlineEvl[zLpCtr3])
 									// Same logic but reversing the evaluation
-									if (testY2 > (yMinVerticalLine[z] - okVLGap)) {
+									if ((testY2 > (yMinVerticalLine[z] - okVLGap)) && (testY1 < yMinVerticalLine[z])) {
 										// Append the two lines
 										yMinVerticalLine[z] = testY1;
 										wasAppd = true;
@@ -1471,6 +1475,9 @@ public class HelloOCV {
 										
 										// Exit the loop having appended the necessary segments together
 										z = diffVLCount + 1;
+									} else if (testY2 > (yMinVerticalLine[z] - okVLGap)) {
+										// Because the line was ambiguous, simply ignore it here
+										wasAppd = true;
 									}
 								}
 							}	
@@ -1480,6 +1487,12 @@ public class HelloOCV {
 								yMaxVerticalLine[diffVLCount] = testY2;
 								diffVLCount ++;
 							}
+							if (TROUBLESHOOTING_MODE) {
+								for (int lgc = 0; lgc<diffVLCount; lgc++) {
+									System.out.println("GroupX low and high " + Double.toString(yMinVerticalLine[lgc]) + " / " + yMaxVerticalLine[lgc]);									
+								}
+							}
+
 						}
 					}
 				}
@@ -1487,7 +1500,7 @@ public class HelloOCV {
 			// At least during development, display horizontal lines
 			Imgproc.line(hslTO, new Point(0,yMinVerticalLineSet[x]), new Point(pxlWidth,yMinVerticalLineSet[x]), new Scalar(250,x,255), 1);
 			Imgproc.line(hslTO, new Point(0,yMaxVerticalLineSet[x]), new Point(pxlWidth,yMaxVerticalLineSet[x]), new Scalar(250,x,255), 1);
-			Imgcodecs.imwrite("HSLout_with_lines2.jpg", hslTO);
+			if (JPGS_TO_C) Imgcodecs.imwrite("HSLout_with_lines2.jpg", hslTO);
 
 		}
 		
@@ -1614,7 +1627,7 @@ public class HelloOCV {
 			Imgproc.line(image, targetLines[x].point1(), targetLines[x].point2(), new Scalar(0,255,255), 1);
 		}
 		// Save a copy of the amended file with the identified lines
-		Imgcodecs.imwrite("img_with_lines.jpg", image);
+		if (JPGS_TO_C) Imgcodecs.imwrite("img_with_lines.jpg", image);
 	}
 
 	private static void exportLineData(TargetLine[] targetLines) throws IOException {
