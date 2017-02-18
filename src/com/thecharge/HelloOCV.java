@@ -455,10 +455,10 @@ public class HelloOCV {
 	private static void selectNextParameterSet() {
 		
 		//jpgFile = new String("Picture 6.jpg");
-		//jpgFile = new String("LTGym3ft.jpg");	
+		jpgFile = new String("LTGym3ft.jpg");	
 		//jpgFile = new String("Kitchen58inLt.jpg");
 		//jpgFile = new String("KitchLtOn20in60d.jpg");
-		jpgFile = new String("KitchLtOn46in45d.jpg");
+		//jpgFile = new String("KitchLtOn46in45d.jpg");
 		//jpgFile = new String("OriginalVImage.jpg");
 		//String jpgFile = new String("LTGym6f45d.jpg");
 		//String jpgFile = new String("LTGym6f70d.jpg");
@@ -924,7 +924,7 @@ public class HelloOCV {
 		Imgproc.line(image, ptBR, ptTR, new Scalar(0,0,255), 1);
 
 		// Save a copy of the amended file with the identified lines
-		if (JPGS_TO_C) Imgcodecs.imwrite("img_with_lines.jpg", image);
+		if (JPGS_TO_C) Imgcodecs.imwrite("Image_with_Answer.jpg", image);
 	}
 
 	private static void calcTargetDistance() {
@@ -1055,9 +1055,26 @@ public class HelloOCV {
 		// Throwing out outliers, estimate the Y value for the top of the target
 		useCount = 0;
 		for (int x = 0; x <= vLineSet; x ++) {
-			if (((yMaxVerticalLineSet[x] - meanTop) * (yMaxVerticalLineSet[x] - meanTop)) < (stdevTop * stdevTop)) {
-				nomYTgtTop += yMaxVerticalLineSet[x];
-				useCount ++;
+			if (x == tgt1LeftXPtr) {
+				if (((yMaxVerticalLineSet[x] - meanTop) * (yMaxVerticalLineSet[x] - meanTop)) < (stdevTop * stdevTop)) {
+					nomYTgtTop += yMaxVerticalLineSet[x];
+					useCount ++;
+				}
+			} else if (x == tgt1RightXPtr) {
+				if (((yMaxVerticalLineSet[x] - meanTop) * (yMaxVerticalLineSet[x] - meanTop)) < (stdevTop * stdevTop)) {
+					nomYTgtTop += yMaxVerticalLineSet[x];
+					useCount ++;
+				}
+			} else if (x == tgt2LeftXPtr) {
+				if (((yMaxVerticalLineSet[x] - meanTop) * (yMaxVerticalLineSet[x] - meanTop)) < (stdevTop * stdevTop)) {
+					nomYTgtTop += yMaxVerticalLineSet[x];
+					useCount ++;
+				}
+			} else if (x == tgt2RightXPtr) {
+				if (((yMaxVerticalLineSet[x] - meanTop) * (yMaxVerticalLineSet[x] - meanTop)) < (stdevTop * stdevTop)) {
+					nomYTgtTop += yMaxVerticalLineSet[x];
+					useCount ++;
+				}
 			}
 		}
 		nomYTgtTop = nomYTgtTop / useCount;
@@ -1065,9 +1082,26 @@ public class HelloOCV {
 		// Throwing out outliers, estimate the Y value for the bottom of the target
 		useCount = 0;
 		for (int x = 0; x <= vLineSet; x ++) {
-			if (((yMinVerticalLineSet[x] - meanBtm) * (yMinVerticalLineSet[x] - meanBtm)) < (stdevBtm * stdevBtm)) {
-				nomYTgtBtm += yMinVerticalLineSet[x];
-				useCount ++;
+			if (x == tgt1LeftXPtr) {
+				if (((yMinVerticalLineSet[x] - meanBtm) * (yMinVerticalLineSet[x] - meanBtm)) < (stdevBtm * stdevBtm)) {
+					nomYTgtBtm += yMinVerticalLineSet[x];
+					useCount ++;
+				}
+			} else if (x == tgt1RightXPtr) {
+				if (((yMinVerticalLineSet[x] - meanBtm) * (yMinVerticalLineSet[x] - meanBtm)) < (stdevBtm * stdevBtm)) {
+					nomYTgtBtm += yMinVerticalLineSet[x];
+					useCount ++;
+				}
+			} else if (x == tgt2LeftXPtr) {
+				if (((yMinVerticalLineSet[x] - meanBtm) * (yMinVerticalLineSet[x] - meanBtm)) < (stdevBtm * stdevBtm)) {
+					nomYTgtBtm += yMinVerticalLineSet[x];
+					useCount ++;
+				}
+			} else if (x == tgt2RightXPtr) {
+				if (((yMinVerticalLineSet[x] - meanBtm) * (yMinVerticalLineSet[x] - meanBtm)) < (stdevBtm * stdevBtm)) {
+					nomYTgtBtm += yMinVerticalLineSet[x];
+					useCount ++;
+				}
 			}
 		}
 		nomYTgtBtm = nomYTgtBtm / useCount;
@@ -1092,17 +1126,31 @@ public class HelloOCV {
 			// Vertical ...
 			if (x == tgt1LeftXPtr) {
 				Imgproc.line(hslTO, new Point(nomXTgt1L,0), new Point(nomXTgt1L,pxlHeight), new Scalar(200,250,50), 1);	
+				Imgproc.line(hslTO, new Point(nomXTgt1L,0), new Point(nomXTgt1L,80), new Scalar(200,250,50), 3);	
+				Imgproc.line(hslTO, new Point(nomXTgt1L,pxlHeight-80), new Point(nomXTgt1L,pxlHeight), new Scalar(200,250,50), 3);	
 			} else if (x == tgt1RightXPtr) {
 				Imgproc.line(hslTO, new Point(nomXTgt1R,0), new Point(nomXTgt1R,pxlHeight), new Scalar(200,250,50), 1);	
+				Imgproc.line(hslTO, new Point(nomXTgt1R,0), new Point(nomXTgt1R,80), new Scalar(200,250,50), 3);	
+				Imgproc.line(hslTO, new Point(nomXTgt1R,pxlHeight-80), new Point(nomXTgt1R,pxlHeight), new Scalar(200,250,50), 3);	
 			} else if (x == tgt2LeftXPtr) {
 				Imgproc.line(hslTO, new Point(nomXTgt2L,0), new Point(nomXTgt2L,pxlHeight), new Scalar(200,250,50), 1);	
+				Imgproc.line(hslTO, new Point(nomXTgt2L,0), new Point(nomXTgt2L,80), new Scalar(200,250,50), 3);	
+				Imgproc.line(hslTO, new Point(nomXTgt2L,pxlHeight-80), new Point(nomXTgt2L,pxlHeight), new Scalar(200,250,50), 3);	
 			} else if (x == tgt2RightXPtr) {
 				Imgproc.line(hslTO, new Point(nomXTgt2R,0), new Point(nomXTgt2R,pxlHeight), new Scalar(200,250,50), 1);	
+				Imgproc.line(hslTO, new Point(nomXTgt2R,0), new Point(nomXTgt2R,80), new Scalar(200,250,50), 3);	
+				Imgproc.line(hslTO, new Point(nomXTgt2R,pxlHeight-80), new Point(nomXTgt2R,pxlHeight), new Scalar(200,250,50), 3);	
 			}
 		}
 		// ... and horizontal
 		Imgproc.line(hslTO, new Point(0,nomYTgtTop), new Point(pxlWidth,nomYTgtTop), new Scalar(200,250,50), 1);	
+		Imgproc.line(hslTO, new Point(0,nomYTgtTop), new Point(50,nomYTgtTop), new Scalar(200,250,50), 3);	
+		Imgproc.line(hslTO, new Point(pxlWidth-50,nomYTgtTop), new Point(pxlWidth,nomYTgtTop), new Scalar(200,250,50), 3);	
+
 		Imgproc.line(hslTO, new Point(0,nomYTgtBtm), new Point(pxlWidth,nomYTgtBtm), new Scalar(200,250,50), 1);	
+		Imgproc.line(hslTO, new Point(0,nomYTgtBtm), new Point(50,nomYTgtBtm), new Scalar(200,250,50), 3);	
+		Imgproc.line(hslTO, new Point(pxlWidth-50,nomYTgtBtm), new Point(pxlWidth,nomYTgtBtm), new Scalar(200,250,50), 3);	
+		
 		if (JPGS_TO_C) Imgcodecs.imwrite("HSLout_with_lines_chosen.jpg", hslTO);
 
 		
@@ -1268,9 +1316,9 @@ public class HelloOCV {
 								gap1 = (nominalVerticalLineX[y] - nominalVerticalLineX[x]);
 								gap2 = (nominalVerticalLineX[z] - nominalVerticalLineX[y]);
 								gap3 = (nominalVerticalLineX[w] - nominalVerticalLineX[z]);
-								if (TROUBLESHOOTING_MODE) System.out.println("Assessing gap of : " + Double.toString(gap1));
-								if (TROUBLESHOOTING_MODE) System.out.println("Assessing gap of : " + Double.toString(gap2));
-								if (TROUBLESHOOTING_MODE) System.out.println("Assessing gap of : " + Double.toString(gap3));
+								//if (TROUBLESHOOTING_MODE) System.out.println("Assessing gap of : " + Double.toString(gap1));
+								//if (TROUBLESHOOTING_MODE) System.out.println("Assessing gap of : " + Double.toString(gap2));
+								//if (TROUBLESHOOTING_MODE) System.out.println("Assessing gap of : " + Double.toString(gap3));
 								if (((gap3 / gap1) < 1.5) && ((gap1 / gap3) < 1.5)) {
 									if (((gap2 / gap1) > 3) && ((gap2 / gap3) > 3)) {
 										if (((gap2 / gap1) < 10) && ((gap2 / gap3) < 10)) {
@@ -1305,6 +1353,42 @@ public class HelloOCV {
 			tgt2RightXPtr = vertSel[3];
 		}
 		if (TROUBLESHOOTING_MODE) System.out.println();
+		
+		
+		
+		// Save our weighted lines to a file if analysis is needed (false to create)
+		try(PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter("weighted_line_segments.txt", false)))) {
+		    out.println("NomX,WtdVLen,LineID,");
+		}catch (IOException e) {
+		    System.err.println(e);
+		}			
+		
+		// (true to append)
+		try(PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter("weighted_line_segments.txt", true)))) {
+			for (int x = 0; x <= (vLineSet); x++) {
+				String LineOut;
+				LineOut = Double.toString(nominalVerticalLineX[x]);
+				LineOut += "," + Double.toString(totalizedVerticalLen[x]);
+				
+				if (x == tgt1LeftXPtr) {
+					LineOut += ",T1L";
+				} else if (x == tgt1RightXPtr) {
+					LineOut += ",T1R";
+				} else if (x == tgt2LeftXPtr) {
+					LineOut += ",T2L";
+				} else if (x == tgt2RightXPtr) {
+					LineOut += ",T2R";
+				}
+				
+				out.println(LineOut);
+			}
+		}catch (IOException e) {
+		    System.err.println(e);
+		}			
+		
+		
+		
+		
 	}
 
 	private static void findLongestContiguousVLines(TargetLine[] targetLines, double[] nominalVerticalLineX,
@@ -1319,7 +1403,7 @@ public class HelloOCV {
 		// For each vertical line group, find the longest contiguous series of associated segments (ideally 1 series)
 		for (int x = 0; x <= vLineSet; x++) {
 			Imgproc.line(hslTO, new Point(nominalVerticalLineX[x],0), new Point(nominalVerticalLineX[x],pxlHeight), new Scalar(250,0,255), 1);
-			if (JPGS_TO_C) Imgcodecs.imwrite("HSLout_with_lines2.jpg", hslTO);
+			if (JPGS_TO_C) Imgcodecs.imwrite("HSLout_with_candidate_lines.jpg", hslTO);
 			if (TROUBLESHOOTING_MODE) System.out.println("Evaluating vertical line group " + Integer.toString(x));
 			diffVLCount = 0;
 			// For each original line relating to this line group, append as able
@@ -1602,7 +1686,7 @@ public class HelloOCV {
 			// At least during development, display horizontal lines
 			Imgproc.line(hslTO, new Point(0,yMinVerticalLineSet[x]), new Point(pxlWidth,yMinVerticalLineSet[x]), new Scalar(250,x,255), 1);
 			Imgproc.line(hslTO, new Point(0,yMaxVerticalLineSet[x]), new Point(pxlWidth,yMaxVerticalLineSet[x]), new Scalar(250,x,255), 1);
-			if (JPGS_TO_C) Imgcodecs.imwrite("HSLout_with_lines2.jpg", hslTO);
+			if (JPGS_TO_C) Imgcodecs.imwrite("HSLout_with_candidate_lines.jpg", hslTO);
 			if (yMaxVerticalLineSet[x] > 250) {
 				userStop = true;
 			}
