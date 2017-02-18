@@ -28,6 +28,7 @@ public class HelloOCV {
 	private static final boolean CALIBRATION_MODE = false;
 	private static final boolean USE_VIDEO = false;
 	private static final boolean JPGS_TO_C = true;
+	private static boolean userStop = false;
 	private static final double INCH_GAP_BETW = 6.25; // Distance between reflective targets
 	private static final double INCH_TGT_WIDE = 2; // Width of the reflective target
 	private static final double INCH_TGT_HEIGHT = 5; // Height of the reflective target
@@ -56,12 +57,13 @@ public class HelloOCV {
 	private static double tanHlfAngleH = Math.tan(Math.toRadians(HALF_FIELD_ANGLE_H));
 	private static double tanHlfAngleV = Math.tan(Math.toRadians(HALF_FIELD_ANGLE_V));
 	private static double dist2Target = 0;	// Calculated distance to the target in inches
-	private static final double INITIAL_LO_HUE = 73;		//74;
-	private static final double INITIAL_HI_HUE = 103;	//96;	// 93.99317406143345;
-	private static final double INITIAL_LO_SATURATION = 14;	//40;	//45.86330935251798;
-	private static final double INITIAL_HI_SATURATION = 255;	//140;	//153;	// 128.80546075085323;
-	private static final double INITIAL_LO_LUMIN = 135;	//80.26079136690647;
-	private static final double INITIAL_HI_LUMIN = 235;	//163.61774744027304;
+	private static final double INITIAL_LO_HUE = 68;	//32, 73;		//74;
+	private static final double INITIAL_HI_HUE = 120;	//117, 103;	//96;	// 93.99317406143345;
+	private static final double INITIAL_LO_SATURATION = 0;	//211, 14;	//40;	//45.86330935251798;
+	private static final double INITIAL_HI_SATURATION = 255;	//255, 255;	//140;	//153;	// 128.80546075085323;
+	private static final double INITIAL_LO_LUMIN = 0;	//66, 135;	//80.26079136690647;
+	private static final double INITIAL_HI_LUMIN = 229;	//166, 235;	//163.61774744027304;
+	private static boolean lastTestInCalbrPh = false;
 	private static double loHue = 0;	// 81 from optimization;
 	private static double hiHue = 0;	// 93.99317406143345;
 	private static double loSat = 0;	// 45.86330935251798;
@@ -140,6 +142,7 @@ public class HelloOCV {
 				System.out.println("The camera didn't open.");
 				throw new Exception("Can't open the camera.");
 	    	}
+	    	
 	    	double camSetting = 0;
 	    	//5 - CV_CAP_PROP_FPS Frame rate.
 	    	camSetting = camera.get(Videoio.CAP_PROP_APERTURE);		//-1
@@ -150,30 +153,29 @@ public class HelloOCV {
 	    	camSetting = camera.get(Videoio.CAP_PROP_CONVERT_RGB);	//-1
 	    	
 	    	
-	    	camSetting = camera.get(Videoio.CAP_PROP_BRIGHTNESS);	//-1  
-	    	camera.set(Videoio.CAP_PROP_BRIGHTNESS, 66);	// 142, 32, 73 // 66  //10 - CV_CAP_PROP_BRIGHTNESS Brightness of the image (only for cameras).
+	    	camSetting = camera.get(Videoio.CAP_PROP_BRIGHTNESS);	
+	    	//camera.set(Videoio.CAP_PROP_BRIGHTNESS, 18);	// 66, 142, 32, 73 // 66  //10 - CV_CAP_PROP_BRIGHTNESS Brightness of the image (only for cameras).
 	    	
-	    	camSetting = camera.get(Videoio.CAP_PROP_CONTRAST);	//-1  
-	    	camera.set(Videoio.CAP_PROP_CONTRAST, 32);		// 66, 128, 42, 32  //11 - CV_CAP_PROP_CONTRAST Contrast of the image (only for cameras).
+	    	camSetting = camera.get(Videoio.CAP_PROP_CONTRAST);	
+	    	//camera.set(Videoio.CAP_PROP_CONTRAST, 90);		// 32, 66, 128, 42, 32  //11 - CV_CAP_PROP_CONTRAST Contrast of the image (only for cameras).
 	    	
-	    	camSetting = camera.get(Videoio.CAP_PROP_EXPOSURE);	//-1  
-	    	camera.set(Videoio.CAP_PROP_EXPOSURE, -1); 	// -2 -3 -2, -1  // 15 - CV_CAP_PROP_EXPOSURE Exposure (only for cameras).
+	    	camSetting = camera.get(Videoio.CAP_PROP_EXPOSURE);	
+	    	//camera.set(Videoio.CAP_PROP_EXPOSURE, -3); 	// -1, -2 -3 -2, -1  // 15 - CV_CAP_PROP_EXPOSURE Exposure (only for cameras).
 	    	
-	    	camSetting = camera.get(Videoio.CAP_PROP_GAIN);	//-1  
-	    	camera.set(Videoio.CAP_PROP_GAIN, 44);			// 9, 40, 9, 44  // 14 - CV_CAP_PROP_GAIN Gain of the image (only for cameras).
+	    	camSetting = camera.get(Videoio.CAP_PROP_GAIN);	
+	    	//camera.set(Videoio.CAP_PROP_GAIN, 16);			// 44, 9, 40, 9, 44  // 14 - CV_CAP_PROP_GAIN Gain of the image (only for cameras).
 	    	
-	    	camSetting = camera.get(Videoio.CAP_PROP_SATURATION);	//-1  
-	    	camera.set(Videoio.CAP_PROP_SATURATION, 255);			// 209, 186, 35, 255 // 12 - CV_CAP_PROP_SATURATION Saturation of the image (only for cameras).
+	    	camSetting = camera.get(Videoio.CAP_PROP_SATURATION);	
+	    	//camera.set(Videoio.CAP_PROP_SATURATION, 255);			// 255, 209, 186, 35, 255 // 12 - CV_CAP_PROP_SATURATION Saturation of the image (only for cameras).
 	    	
-	    	camSetting = camera.get(Videoio.CAP_PROP_WHITE_BALANCE_BLUE_U);	//-1  
-	    	camera.set(Videoio.CAP_PROP_WHITE_BALANCE_BLUE_U, 6500);		//2800, 6500
+	    	camSetting = camera.get(Videoio.CAP_PROP_WHITE_BALANCE_BLUE_U);	
+	    	//camera.set(Videoio.CAP_PROP_WHITE_BALANCE_BLUE_U, 6500);		//6500, 2800, 6500
 	    	
-	    	camSetting = camera.get(Videoio.CAP_PROP_WHITE_BALANCE_RED_V);	//-1  
-	    	camera.set(Videoio.CAP_PROP_WHITE_BALANCE_RED_V, 6500);		//-1, 6500
-	    	//camera.set(Videoio.CAP_PROP_CONTRAST, .15);
+	    	camSetting = camera.get(Videoio.CAP_PROP_WHITE_BALANCE_RED_V);	
+	    	//camera.set(Videoio.CAP_PROP_WHITE_BALANCE_RED_V, -1);		//6500, -1, 6500
 	    	
-	    	camSetting = camera.get(Videoio.CAP_PROP_HUE);	//-1  
-	    	camera.set(Videoio.CAP_PROP_HUE, 4.04987E7);	// 4.3513e7, 3.84e7, //13 - CV_CAP_PROP_HUE Hue of the image (only for cameras).
+	    	camSetting = camera.get(Videoio.CAP_PROP_HUE);	
+	    	//camera.set(Videoio.CAP_PROP_HUE, 3.6305E7);	// 4.04987E7, 4.3513e7, 3.84e7, //13 - CV_CAP_PROP_HUE Hue of the image (only for cameras).
 	    	
 		}
 		
@@ -216,8 +218,8 @@ public class HelloOCV {
 			initializeForNextImage();
 			executionCount ++;
 			
-		//} while ((calibrPass < 99) || (USE_VIDEO));
-		} while (executionCount < 1);
+		} while ((calibrPass < 99) || (USE_VIDEO));
+		//} while (executionCount < 1);
 			
 		if (USE_VIDEO)
 			camera.release();
@@ -225,7 +227,7 @@ public class HelloOCV {
 
 	private static void processSingleImage(Mat image) throws IOException, Exception {
 
-		if (JPGS_TO_C) Imgcodecs.imwrite("OriginalImage.jpg", image);
+		if (executionCount == 1) Imgcodecs.imwrite("OriginalImage.jpg", image);
 
 		// Using the class Pipeline, instantiate here with the specified image
 		// (replicate the class here)
@@ -272,7 +274,7 @@ public class HelloOCV {
 			Imgproc.cvtColor(temp, hslTO, Imgproc.COLOR_GRAY2BGR);
 			
 			for (int x = 0; x < ocvLineCount; x++){
-				Imgproc.line(hslTO, targetLines[x].point1(), targetLines[x].point2(), new Scalar(20,20,200), 3);
+				Imgproc.line(hslTO, targetLines[x].point1(), targetLines[x].point2(), new Scalar(10,10,250), 1);
 			}
 			// Save a copy of the amended file with the identified lines
 			if (JPGS_TO_C) Imgcodecs.imwrite("HSLout_with_lines.jpg", hslTO);
@@ -439,9 +441,10 @@ public class HelloOCV {
 
 	private static void selectNextParameterSet() {
 		
-		jpgFile = new String("Picture 6.jpg");
-		//jpgFile = new String("OriginalImage.jpg");
-		//jpgFile = new String("LTGym3ft.jpg");
+		//jpgFile = new String("Picture 6.jpg");
+		//jpgFile = new String("LTGym3ft.jpg");	
+		//jpgFile = new String("Kitchen58inLt.jpg");
+		jpgFile = new String("OriginalVImage.jpg");
 		//String jpgFile = new String("LTGym6f45d.jpg");
 		//String jpgFile = new String("LTGym6f70d.jpg");
 		//String jpgFile = new String("LTGym8ft.jpg");
@@ -450,6 +453,8 @@ public class HelloOCV {
 		//private static boolean doCalibrate = false;
 		//CalibrationData[] calibrRcd = new CalibrationData();
 
+		lastTestInCalbrPh = false;
+		
 		// The first pass (analysisPassCount = 0), create a set of tests but take the use the defined initial set
 		if (CALIBRATION_MODE) {
 			if (calibrPass == 0) {
@@ -496,7 +501,8 @@ public class HelloOCV {
 			loSat = INITIAL_LO_SATURATION;
 			hiSat = INITIAL_HI_SATURATION;
 			loLum = INITIAL_LO_LUMIN;
-			hiLum = INITIAL_HI_LUMIN;			
+			hiLum = INITIAL_HI_LUMIN;	
+			lastTestInCalbrPh = true;
 		}
 		
 		
@@ -530,8 +536,8 @@ public class HelloOCV {
 		imageQuality -= (stdErrT / 3);
 		imageQuality -= (stdErrB / 4);
 		
-		imageQuality -= (lTgtAccrW - 1);
-		imageQuality -= (rTgtAccrW - 1);
+		if (lTgtAccrW > 1) imageQuality -= (lTgtAccrW - 1);
+		if (rTgtAccrW > 1) imageQuality -= (rTgtAccrW - 1);
 		
 		if (imageQuality < 0) {
 			imageQuality = 0;
@@ -995,19 +1001,41 @@ public class HelloOCV {
 		
  		// Note the nominal target top and bottom values (calculate a simple average from the vertical lines)
 		for (int x = 0; x <= vLineSet; x ++) {
-			meanBtm += yMinVerticalLineSet[x];
-			meanTop += yMaxVerticalLineSet[x];
+			if (x == tgt1LeftXPtr) {
+				meanBtm += yMinVerticalLineSet[x];
+				meanTop += yMaxVerticalLineSet[x];
+			} else if (x == tgt1RightXPtr) {
+				meanBtm += yMinVerticalLineSet[x];
+				meanTop += yMaxVerticalLineSet[x];
+			} else if (x == tgt2LeftXPtr) {
+				meanBtm += yMinVerticalLineSet[x];
+				meanTop += yMaxVerticalLineSet[x];
+			} else if (x == tgt2RightXPtr) {
+				meanBtm += yMinVerticalLineSet[x];
+				meanTop += yMaxVerticalLineSet[x];
+			}
 		}
-		meanBtm = nomYTgtBtm/(vLineSet + 1);
-		meanTop = nomYTgtTop/(vLineSet + 1);
+		meanBtm = meanBtm/4;
+		meanTop = meanTop/4;
 		
 		// Calculate the standard deviation, top and bottom
 		for (int x = 0; x <= vLineSet; x ++) {
-			stdevBtm += (yMinVerticalLineSet[x] - meanBtm) * (yMinVerticalLineSet[x] - meanBtm);
-			stdevTop += (yMaxVerticalLineSet[x] - meanTop) * (yMaxVerticalLineSet[x] - meanTop);
+			if (x == tgt1LeftXPtr) {
+				stdevBtm += (yMinVerticalLineSet[x] - meanBtm) * (yMinVerticalLineSet[x] - meanBtm);
+				stdevTop += (yMaxVerticalLineSet[x] - meanTop) * (yMaxVerticalLineSet[x] - meanTop);
+			} else if (x == tgt1RightXPtr) {
+				stdevBtm += (yMinVerticalLineSet[x] - meanBtm) * (yMinVerticalLineSet[x] - meanBtm);
+				stdevTop += (yMaxVerticalLineSet[x] - meanTop) * (yMaxVerticalLineSet[x] - meanTop);
+			} else if (x == tgt2LeftXPtr) {
+				stdevBtm += (yMinVerticalLineSet[x] - meanBtm) * (yMinVerticalLineSet[x] - meanBtm);
+				stdevTop += (yMaxVerticalLineSet[x] - meanTop) * (yMaxVerticalLineSet[x] - meanTop);
+			} else if (x == tgt2RightXPtr) {
+				stdevBtm += (yMinVerticalLineSet[x] - meanBtm) * (yMinVerticalLineSet[x] - meanBtm);
+				stdevTop += (yMaxVerticalLineSet[x] - meanTop) * (yMaxVerticalLineSet[x] - meanTop);
+			}
 		}
-		stdevBtm = Math.sqrt(stdevBtm/(vLineSet + 1));
-		stdevTop = Math.sqrt(stdevTop/(vLineSet + 1));
+		stdevBtm = Math.sqrt(stdevBtm/4);
+		stdevTop = Math.sqrt(stdevTop/4);
 
 		// Throwing out outliers, estimate the Y value for the top of the target
 		useCount = 0;
@@ -1542,6 +1570,9 @@ public class HelloOCV {
 			Imgproc.line(hslTO, new Point(0,yMinVerticalLineSet[x]), new Point(pxlWidth,yMinVerticalLineSet[x]), new Scalar(250,x,255), 1);
 			Imgproc.line(hslTO, new Point(0,yMaxVerticalLineSet[x]), new Point(pxlWidth,yMaxVerticalLineSet[x]), new Scalar(250,x,255), 1);
 			if (JPGS_TO_C) Imgcodecs.imwrite("HSLout_with_lines2.jpg", hslTO);
+			if (yMaxVerticalLineSet[x] > 250) {
+				userStop = true;
+			}
 
 		}
 		
