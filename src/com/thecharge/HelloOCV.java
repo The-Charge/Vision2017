@@ -57,12 +57,12 @@ public class HelloOCV {
 	private static double tanHlfAngleH = Math.tan(Math.toRadians(HALF_FIELD_ANGLE_H));
 	private static double tanHlfAngleV = Math.tan(Math.toRadians(HALF_FIELD_ANGLE_V));
 	private static double dist2Target = 0;	// Calculated distance to the target in inches
-	private static final double INITIAL_LO_HUE = 68;	//32, 73;		//74;
-	private static final double INITIAL_HI_HUE = 120;	//117, 103;	//96;	// 93.99317406143345;
-	private static final double INITIAL_LO_SATURATION = 0;	//211, 14;	//40;	//45.86330935251798;
+	private static final double INITIAL_LO_HUE = 40;	//65,68,32, 73;		//74;
+	private static final double INITIAL_HI_HUE = 142;	//120,117, 103;	//96;	// 93.99317406143345;
+	private static final double INITIAL_LO_SATURATION = 2;	//156,211, 14;	//40;	//45.86330935251798;
 	private static final double INITIAL_HI_SATURATION = 255;	//255, 255;	//140;	//153;	// 128.80546075085323;
-	private static final double INITIAL_LO_LUMIN = 0;	//66, 135;	//80.26079136690647;
-	private static final double INITIAL_HI_LUMIN = 229;	//166, 235;	//163.61774744027304;
+	private static final double INITIAL_LO_LUMIN = 89;	//99,66, 135;	//80.26079136690647;
+	private static final double INITIAL_HI_LUMIN = 133;	//255,166, 235;	//163.61774744027304;
 	private static boolean lastTestInCalbrPh = false;
 	private static double loHue = 0;	// 81 from optimization;
 	private static double hiHue = 0;	// 93.99317406143345;
@@ -268,13 +268,13 @@ public class HelloOCV {
 			}
 
 			
-			
+			// Create a "matrix" for use during analysis
 			Mat temp = gp.hslThresholdOutput();
 			hslTO = new Mat();
 			Imgproc.cvtColor(temp, hslTO, Imgproc.COLOR_GRAY2BGR);
 			
 			for (int x = 0; x < ocvLineCount; x++){
-				Imgproc.line(hslTO, targetLines[x].point1(), targetLines[x].point2(), new Scalar(10,10,250), 1);
+				Imgproc.line(hslTO, targetLines[x].point1(), targetLines[x].point2(), new Scalar(10,10,250), 2);
 			}
 			// Save a copy of the amended file with the identified lines
 			if (JPGS_TO_C) Imgcodecs.imwrite("HSLout_with_lines.jpg", hslTO);
@@ -285,17 +285,22 @@ public class HelloOCV {
 			// Sort the line fragments by the average x1/x2
 			sortTargetlinesX(targetLines);
 			
+			// Save our line data to srtLineOutput.txt
 			exportLineData(targetLines);
+			
+			// Overlay the original image with the identified lines to img_with_lines.jpg
 			outputOverlayedLines(image, targetLines);
+			
+			// Get the x average from x1 and x2 for each line so that we can evaluate vertical lines
 			calcXAvgDiff(xAvgDiff, targetLines);
 			
-			// Sum the line lengths for grouped lines
-	
+			// Determine that differential between x values at which we would consider the lines to be the same line
 			calcIsSameLine();
 	
 			double[] totalizedVerticalLen = new double[ocvLineCount]; // An array of totalized line lengths, though we expect fewer entries than allocated
 			double[] nominalVerticalLineX = new double[ocvLineCount]; // Nominal x coordinate of the particular vertical line
 	
+			// Assemble line segments into groups with an effective length, determining the number of line groups = vLineSet + 1
 			groupVerticalLines(xAvgDiff, targetLines, totalizedVerticalLen, nominalVerticalLineX);
 			
 			// Find the longest contiguous chain of lines for each vertical line group identified
@@ -316,12 +321,20 @@ public class HelloOCV {
 			double[] xMinHorizontalLineSet = new double[ocvLineCount]; // Minimum y coordinate of the particular vertical line set
 			double[] xMaxHorizontalLineSet = new double[ocvLineCount]; // Maximum y coordinate of the particular vertical line set
 			
+			// Having chosen our four best lines, determine where we'll look for our horizontal boundaries of the targets
 			findHorizontalLines(edgeID, targetLines, nominalVerticalLineX, yMinVerticalLineSet, yMaxVerticalLineSet, xMinHorizontalLine, xMaxHorizontalLine, xMinHorizontalLineSet, xMaxHorizontalLineSet);
+			
 			generateGripImage(gp);
+			
+			// Using x,y pairs from predefined positions within the line segments, perform a line fit for target top and bottom 
 			findLineFit(image, edgeID, targetLines);
+			
 			saveLineData(xAvgDiff, edgeID, targetLines, totalizedVerticalLen, nominalVerticalLineX, yMinVerticalLineSet, yMaxVerticalLineSet, xMinHorizontalLineSet, xMaxHorizontalLineSet);
+			
 			printLineFit();
+			
 			calcAngOfIncR();
+			
 			calcTargetDistance();
 			
 			// For the case where we want to analyze a series of tuning choices, record the results to a file
@@ -444,7 +457,9 @@ public class HelloOCV {
 		//jpgFile = new String("Picture 6.jpg");
 		//jpgFile = new String("LTGym3ft.jpg");	
 		//jpgFile = new String("Kitchen58inLt.jpg");
-		jpgFile = new String("OriginalVImage.jpg");
+		//jpgFile = new String("KitchLtOn20in60d.jpg");
+		jpgFile = new String("KitchLtOn46in45d.jpg");
+		//jpgFile = new String("OriginalVImage.jpg");
 		//String jpgFile = new String("LTGym6f45d.jpg");
 		//String jpgFile = new String("LTGym6f70d.jpg");
 		//String jpgFile = new String("LTGym8ft.jpg");
@@ -1057,7 +1072,6 @@ public class HelloOCV {
 		}
 		nomYTgtBtm = nomYTgtBtm / useCount;
 		
-		
 		if (TROUBLESHOOTING_MODE) System.out.println("The top of the target is estimated at " + Double.toString(nomYTgtTop));
 		if (TROUBLESHOOTING_MODE) System.out.println("The bottom of the target is estimated at " + Double.toString(nomYTgtBtm));
 		if (TROUBLESHOOTING_MODE) System.out.println("The allowable error is " + Double.toString(okHLGap));
@@ -1073,6 +1087,25 @@ public class HelloOCV {
 		if (TROUBLESHOOTING_MODE) System.out.println("Right edge of target 2 has x = " + Double.toString(nomXTgt2R));
 		if (TROUBLESHOOTING_MODE) System.out.println(" ");
 
+		// Capture the estimated target properties
+		for (int x = 0; x <= vLineSet; x++) {
+			// Vertical ...
+			if (x == tgt1LeftXPtr) {
+				Imgproc.line(hslTO, new Point(nomXTgt1L,0), new Point(nomXTgt1L,pxlHeight), new Scalar(200,250,50), 1);	
+			} else if (x == tgt1RightXPtr) {
+				Imgproc.line(hslTO, new Point(nomXTgt1R,0), new Point(nomXTgt1R,pxlHeight), new Scalar(200,250,50), 1);	
+			} else if (x == tgt2LeftXPtr) {
+				Imgproc.line(hslTO, new Point(nomXTgt2L,0), new Point(nomXTgt2L,pxlHeight), new Scalar(200,250,50), 1);	
+			} else if (x == tgt2RightXPtr) {
+				Imgproc.line(hslTO, new Point(nomXTgt2R,0), new Point(nomXTgt2R,pxlHeight), new Scalar(200,250,50), 1);	
+			}
+		}
+		// ... and horizontal
+		Imgproc.line(hslTO, new Point(0,nomYTgtTop), new Point(pxlWidth,nomYTgtTop), new Scalar(200,250,50), 1);	
+		Imgproc.line(hslTO, new Point(0,nomYTgtBtm), new Point(pxlWidth,nomYTgtBtm), new Scalar(200,250,50), 1);	
+		if (JPGS_TO_C) Imgcodecs.imwrite("HSLout_with_lines_chosen.jpg", hslTO);
+
+		
 
 		// At this point we can capture 6 preferred points associated with each target's horizontal line fits
 		incrX = (nomXTgt1R - nomXTgt1L) / 7;
