@@ -1748,7 +1748,8 @@ public class HelloOCV {
 		}
 
 		// We may need to record the length of the last Vertical line group
-		if ((xAvgDiff[(ocvLineCount - 1)] <= isSameLine) || (!targetLines[ocvLineCount - 1].isVertical())) {
+		if ((xAvgDiff[ocvLineCount - 1] < isSameLine) && (targetLines[ocvLineCount - 1].isVertical())) {
+		//if ((xAvgDiff[(ocvLineCount - 1)] < isSameLine) || (!targetLines[ocvLineCount - 1].isVertical())) {
 			// This means that this line was part of the last vertical line group
 			totalizedVerticalLen[vLineSet] = cumulLen;
 			
@@ -1765,6 +1766,9 @@ public class HelloOCV {
 			
 			if (TROUBLESHOOTING_MODE) System.out.println("The last line is of length " + Double.toString(totalizedVerticalLen[vLineSet]));
 			if (TROUBLESHOOTING_MODE) System.out.println("Its position is roughly " + Double.toString(nominalVerticalLineX[vLineSet]));
+			
+		}
+		else if (targetLines[ocvLineCount - 1].isHorizontal()){
 			
 		}
 
