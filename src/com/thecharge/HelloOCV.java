@@ -455,18 +455,15 @@ public class HelloOCV {
 	private static void selectNextParameterSet() {
 		
 		//jpgFile = new String("Picture 6.jpg");
-		jpgFile = new String("LTGym3ft.jpg");	
+		//jpgFile = new String("LTGym3ft.jpg");	
 		//jpgFile = new String("Kitchen58inLt.jpg");
 		//jpgFile = new String("KitchLtOn20in60d.jpg");
 		//jpgFile = new String("KitchLtOn46in45d.jpg");
 		//jpgFile = new String("OriginalVImage.jpg");
-		//String jpgFile = new String("LTGym6f45d.jpg");
-		//String jpgFile = new String("LTGym6f70d.jpg");
-		//String jpgFile = new String("LTGym8ft.jpg");
-		//String jpgFile = new String("LTGym18ft.jpg");  // No lines found
-		//private static int calibrPass = 0;
-		//private static boolean doCalibrate = false;
-		//CalibrationData[] calibrRcd = new CalibrationData();
+		//jpgFile = new String("LTGym6f45d.jpg");
+		//jpgFile = new String("LTGym6f70d.jpg");
+		jpgFile = new String("LTGym8ft.jpg");
+		//jpgFile = new String("LTGym18ft.jpg");  // No lines found
 
 		lastTestInCalbrPh = false;
 		
@@ -1324,7 +1321,7 @@ public class HelloOCV {
 										if (((gap2 / gap1) < 10) && ((gap2 / gap3) < 10)) {
 											spacedOK = true;
 											lineWt = totalizedVerticalLen[x] + totalizedVerticalLen[y] + totalizedVerticalLen[z];
-											if (lineWt > bestWt) {
+											if (lineWt >= bestWt) {
 												bestWt = lineWt;
 												vertSel[0] = x;
 												vertSel[1] = y;
@@ -1408,7 +1405,7 @@ public class HelloOCV {
 			diffVLCount = 0;
 			// For each original line relating to this line group, append as able
 			for (int y = 0; y < ocvLineCount; y++) {
-				if (y == 114) {
+				if (y == 114) {       // This is only for debugging to allow a logical break point
 					testY1 = testY2;
 					testY2 = testY1;
 				}
@@ -1683,7 +1680,7 @@ public class HelloOCV {
 					}
 				}
 			}
-			// At least during development, display horizontal lines
+			// At least during development, display horizontal lines that we've just identified
 			Imgproc.line(hslTO, new Point(0,yMinVerticalLineSet[x]), new Point(pxlWidth,yMinVerticalLineSet[x]), new Scalar(250,x,255), 1);
 			Imgproc.line(hslTO, new Point(0,yMaxVerticalLineSet[x]), new Point(pxlWidth,yMaxVerticalLineSet[x]), new Scalar(250,x,255), 1);
 			if (JPGS_TO_C) Imgcodecs.imwrite("HSLout_with_candidate_lines.jpg", hslTO);
@@ -1709,6 +1706,9 @@ public class HelloOCV {
 		// Now analyze the rest of the lines
 		for (int x = 1; x < ocvLineCount; x++) {
 
+			if (x == 6) {
+				userStop = true;
+			}
 			// Note that we do nothing for non-vertical lines
 			if (xAvgDiff[x] > isSameLine) {
 				// The line is vertical and assessed to be the first in the next group of vertical lines
@@ -1747,8 +1747,9 @@ public class HelloOCV {
 			// Note:  In this loop, nothing happens for lines that aren't vertical
 		}
 
-		// We may need to record the length of the last line group
+		// We may need to record the length of the last Vertical line group
 		if ((xAvgDiff[(ocvLineCount - 1)] <= isSameLine) || (!targetLines[ocvLineCount - 1].isVertical())) {
+			// This means that this line was part of the last vertical line group
 			totalizedVerticalLen[vLineSet] = cumulLen;
 			
 			// Capture the nominal x coordinate
@@ -1756,7 +1757,16 @@ public class HelloOCV {
 			
 			if (TROUBLESHOOTING_MODE) System.out.println("The last line is of length " + Double.toString(totalizedVerticalLen[vLineSet]));
 			if (TROUBLESHOOTING_MODE) System.out.println("Its position is roughly " + Double.toString(nominalVerticalLineX[vLineSet]));
-		} 
+		} else if ((xAvgDiff[(ocvLineCount - 1)] >= isSameLine) && (targetLines[ocvLineCount - 1].isVertical())) {
+			totalizedVerticalLen[vLineSet] = cumulLen;
+			
+			// Capture the nominal x coordinate
+			nominalVerticalLineX[vLineSet] = targetLines[ocvLineCount - 1].xAvg;
+			
+			if (TROUBLESHOOTING_MODE) System.out.println("The last line is of length " + Double.toString(totalizedVerticalLen[vLineSet]));
+			if (TROUBLESHOOTING_MODE) System.out.println("Its position is roughly " + Double.toString(nominalVerticalLineX[vLineSet]));
+			
+		}
 
 		// Estimate the actual length of the lines identified
 		
