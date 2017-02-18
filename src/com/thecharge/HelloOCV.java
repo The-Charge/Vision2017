@@ -280,8 +280,9 @@ public class HelloOCV {
 
 			
 			
-			
+			// Sort the line fragments by the average x1/x2
 			sortTargetlinesX(targetLines);
+			
 			exportLineData(targetLines);
 			outputOverlayedLines(image, targetLines);
 			calcXAvgDiff(xAvgDiff, targetLines);
@@ -301,7 +302,10 @@ public class HelloOCV {
 			double[] yMinVerticalLineSet = new double[ocvLineCount]; // Minimum y coordinate of the particular vertical line set
 			double[] yMaxVerticalLineSet = new double[ocvLineCount]; // Maximum y coordinate of the particular vertical line set
 			
+			// Evaluating the various vertical line segments, look for contiguous sets that might constitute part of the target
 			findLongestContiguousVLines(targetLines, nominalVerticalLineX, yMinVerticalLine, yMaxVerticalLine, yMinVerticalLineSet, yMaxVerticalLineSet);
+			
+			// While we hope for four vertical lines, choose the best four if there are more
 			findFourBestVLines(totalizedVerticalLen, nominalVerticalLineX);
 			
 			// Find the horizontal lines of the targets
@@ -977,7 +981,11 @@ public class HelloOCV {
 		double testX1 = 0;
 		double testX2 = 0;
 		double okHLGap = 12;
-
+		double meanTop = 0;
+		double meanBtm = 0;
+		double stdevTop = 0;
+		double stdevBtm = 0;
+		int useCount = 0;
 
 		// Initialize the arrays for the x max and min for the horizontal lines
 		for (int x = 0; x <= vLineSet; x ++) {
@@ -987,11 +995,40 @@ public class HelloOCV {
 		
  		// Note the nominal target top and bottom values (calculate a simple average from the vertical lines)
 		for (int x = 0; x <= vLineSet; x ++) {
-			nomYTgtBtm += yMinVerticalLineSet[x];
-			nomYTgtTop += yMaxVerticalLineSet[x];
+			meanBtm += yMinVerticalLineSet[x];
+			meanTop += yMaxVerticalLineSet[x];
 		}
-		nomYTgtBtm = nomYTgtBtm/(vLineSet + 1);
-		nomYTgtTop = nomYTgtTop/(vLineSet + 1);
+		meanBtm = nomYTgtBtm/(vLineSet + 1);
+		meanTop = nomYTgtTop/(vLineSet + 1);
+		
+		// Calculate the standard deviation, top and bottom
+		for (int x = 0; x <= vLineSet; x ++) {
+			stdevBtm += (yMinVerticalLineSet[x] - meanBtm) * (yMinVerticalLineSet[x] - meanBtm);
+			stdevTop += (yMaxVerticalLineSet[x] - meanTop) * (yMaxVerticalLineSet[x] - meanTop);
+		}
+		stdevBtm = Math.sqrt(stdevBtm/(vLineSet + 1));
+		stdevTop = Math.sqrt(stdevTop/(vLineSet + 1));
+
+		// Throwing out outliers, estimate the Y value for the top of the target
+		useCount = 0;
+		for (int x = 0; x <= vLineSet; x ++) {
+			if (((yMaxVerticalLineSet[x] - meanTop) * (yMaxVerticalLineSet[x] - meanTop)) < (stdevTop * stdevTop)) {
+				nomYTgtTop += yMaxVerticalLineSet[x];
+				useCount ++;
+			}
+		}
+		nomYTgtTop = nomYTgtTop / useCount;
+		
+		// Throwing out outliers, estimate the Y value for the bottom of the target
+		useCount = 0;
+		for (int x = 0; x <= vLineSet; x ++) {
+			if (((yMinVerticalLineSet[x] - meanBtm) * (yMinVerticalLineSet[x] - meanBtm)) < (stdevBtm * stdevBtm)) {
+				nomYTgtBtm += yMinVerticalLineSet[x];
+				useCount ++;
+			}
+		}
+		nomYTgtBtm = nomYTgtBtm / useCount;
+		
 		
 		if (TROUBLESHOOTING_MODE) System.out.println("The top of the target is estimated at " + Double.toString(nomYTgtTop));
 		if (TROUBLESHOOTING_MODE) System.out.println("The bottom of the target is estimated at " + Double.toString(nomYTgtBtm));
@@ -1283,7 +1320,7 @@ public class HelloOCV {
 												// Possibly append this new grouped segment with other segments 
 												// before or after in the array, retaining lower array position
 												if (yMaxVerticalLine[w] > yMaxVerticalLine[z]) {
-													if ((yMinVerticalLine[w] > (yMinVerticalLine[z] - okVLGap)) && (yMinVerticalLine[w] < (yMaxVerticalLine[z] + okVLGap))){
+													if ((yMinVerticalLine[w] > (yMinVerticalLine[z])) && (yMinVerticalLine[w] < (yMaxVerticalLine[z] + okVLGap))){
 														// Append the lines
 														if (z == (diffVLCount - 1)) {
 															// Update at zLpCtr4 and eliminate at zLpCtr3
@@ -1304,11 +1341,12 @@ public class HelloOCV {
 															yMaxVerticalLine[w] = 0;
 															diffVLCount--; 
 														} else {
+															yMaxVerticalLine[z] = yMaxVerticalLine[w];
 															// Update at zLpCtr3 and eliminate at zLpCtr4
 															if (yMinVerticalLine[w] < yMinVerticalLine[z]) {
 																yMinVerticalLine[z] = yMinVerticalLine[w];
 															}
-															// Leave ymaxVlineEvl[zLpCtr3] alone
+															// Eliminate the obsolete line group
 															yMinVerticalLine[w] = 0;
 															yMaxVerticalLine[w] = 0;
 														}
