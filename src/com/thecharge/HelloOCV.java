@@ -308,7 +308,7 @@ public class HelloOCV {
 				
 				// Estimate the distance to the target based on the available information
 				
-				// Reduce the certainty of the analysis signficantly
+				// Reduce the certainty of the analysis significantly
 				recordAnalysisResults();
 				
 			} else {
@@ -1713,10 +1713,10 @@ public class HelloOCV {
 		}
 
 		// Now analyze the rest of the lines
-		for (int x = 1; x <= ocvLineCount; x++) {
+		for (int x = 1; x < ocvLineCount; x++) {
 
 			// Allow a troubleshooting break point
-			if (x == 6) {
+			if (x == 11) {
 				userStop = true;
 			}
 			
@@ -1736,8 +1736,10 @@ public class HelloOCV {
 				if (TROUBLESHOOTING_MODE) System.out.println("Its position is roughly " + Double.toString(nominalVerticalLineX[vLineSet]));
 				
 				// Having closed out the last group of lines, if this is both the first and the last we wrap up
-				if (x == ocvLineCount) {
+				if (x == (ocvLineCount - 1)) {
 					// Capture the cumulative assessment of the line length
+					vLineSet++;
+					
 					totalizedVerticalLen[vLineSet] = targetLines[x].length;
 
 					// Capture the nominal x coordinate
@@ -1769,7 +1771,7 @@ public class HelloOCV {
 				}
 				
 				// Consider whether any additional handling is required if this happens to be the last line
-				if (x == ocvLineCount) {
+				if (x == (ocvLineCount - 1)) {
 					totalizedVerticalLen[vLineSet] = cumulLen;
 					
 					// Capture the nominal x coordinate
