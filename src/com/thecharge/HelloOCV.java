@@ -1784,6 +1784,7 @@ public class HelloOCV {
 					
 				}
 			}
+			// Note:  In this loop, nothing happens for lines that aren't vertical
 		}
 
 		if (TROUBLESHOOTING_MODE) System.out.println("The number of line sets is " + Integer.toString(vLineSet + 1));
