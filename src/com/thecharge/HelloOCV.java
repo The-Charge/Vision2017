@@ -34,7 +34,7 @@ public class HelloOCV {
 	private static final double INCH_TGT_HEIGHT = 5; // Height of the reflective target
 	private static final double INCH_GND_TO_TGT = 10.75; // Distance from the ground to the bottom of the target
 	private static final double HALF_FIELD_ANGLE_H = 34;	// Half of the angle of view for the camera in operation
-	private static final double HALF_FIELD_ANGLE_V = 21.3;
+	private static final double HALF_FIELD_ANGLE_V = 20.59;	// 21.3
 	private static final double INCH_IS_SAME_LINE = 0.25;
 	private static final double TARGET_WIDTH =  INCH_TGT_WIDE + INCH_GAP_BETW + INCH_TGT_WIDE;	// The width of the target in inches
 	private static final double OK_HL_GAP = 12;
@@ -919,6 +919,8 @@ public class HelloOCV {
         Point ptTR = new Point(nomXTgt2R, yAtXFitTR);
         Point ptBL = new Point(nomXTgt1L, yAtXFitBL);
         Point ptBR = new Point(nomXTgt2R, yAtXFitBR);
+		if (TROUBLESHOOTING_MODE) System.out.println("Top Left x / y of " + Double.toString(nomXTgt1L) + " / " + Double.toString(yAtXFitTL));
+		if (TROUBLESHOOTING_MODE) System.out.println("Top Right x / y of " + Double.toString(nomXTgt2R) + " / " + Double.toString(yAtXFitTR));
 		if (TROUBLESHOOTING_MODE) System.out.println("Bottom Left x / y of " + Double.toString(nomXTgt1L) + " / " + Double.toString(yAtXFitBL));
 		if (TROUBLESHOOTING_MODE) System.out.println("Bottom Right x / y of " + Double.toString(nomXTgt2R) + " / " + Double.toString(yAtXFitBR));
 		if (TROUBLESHOOTING_MODE) System.out.println(" ");
