@@ -36,6 +36,8 @@ public class HelloOCV {
 	private static final double HALF_FIELD_ANGLE_H = 34;	// Half of the angle of view for the camera in operation
 	private static final double HALF_FIELD_ANGLE_V = 20.59;	// 21.3
 	private static final double INCH_IS_SAME_LINE = 0.25;
+	private static final double ROBOT_TURN_RADIUS = 24;		// Preferred turn radius in inches for the robot
+	private static final double DISTANCE_ON_COURSE = 36;	// Inches over which we prefer to approach the robot straight on
 	private static final double TARGET_WIDTH =  INCH_TGT_WIDE + INCH_GAP_BETW + INCH_TGT_WIDE;	// The width of the target in inches
 	private static final double OK_HL_GAP = 12;
 	private static final double RAD_TO_DEG = 57.29577951; // 360 / 2 / pi()
@@ -57,12 +59,12 @@ public class HelloOCV {
 	private static double tanHlfAngleH = Math.tan(Math.toRadians(HALF_FIELD_ANGLE_H));
 	private static double tanHlfAngleV = Math.tan(Math.toRadians(HALF_FIELD_ANGLE_V));
 	private static double dist2Target = 0;	// Calculated distance to the target in inches
-	private static final double INITIAL_LO_HUE = 40;	//65,68,32, 73;		//74;
-	private static final double INITIAL_HI_HUE = 142;	//120,117, 103;	//96;	// 93.99317406143345;
-	private static final double INITIAL_LO_SATURATION = 2;	//156,211, 14;	//40;	//45.86330935251798;
+	private static final double INITIAL_LO_HUE = 83;	//40,65,68,32, 73;		//74;
+	private static final double INITIAL_HI_HUE = 109;	//142,120,117, 103;	//96;	// 93.99317406143345;
+	private static final double INITIAL_LO_SATURATION = 44;	//156,211, 14;	//40;	//45.86330935251798;
 	private static final double INITIAL_HI_SATURATION = 255;	//255, 255;	//140;	//153;	// 128.80546075085323;
-	private static final double INITIAL_LO_LUMIN = 89;	//99,66, 135;	//80.26079136690647;
-	private static final double INITIAL_HI_LUMIN = 133;	//255,166, 235;	//163.61774744027304;
+	private static final double INITIAL_LO_LUMIN = 76;	//89,99,66, 135;	//80.26079136690647;
+	private static final double INITIAL_HI_LUMIN = 192;	//133,255,166, 235;	//163.61774744027304;
 	private static boolean lastTestInCalbrPh = false;
 	private static double loHue = 0;	// 81 from optimization;
 	private static double hiHue = 0;	// 93.99317406143345;
@@ -95,6 +97,7 @@ public class HelloOCV {
 	private static double obsTgtW = 0;
 	private static double angOfIncT = 0;	// Angle that the target is rotated relative to perpendicular
 	private static double angOfIncR = 0;	// Angle that the target is positioned relative to the orientation of the robot
+	private static double angleTrajectory = 0;	// Calculated angle of trajectory for the robot
 	private static double topSlope = 0;
 	private static double topIntercept = 0;
 	private static double yAtXFitTL = 0;
@@ -353,6 +356,7 @@ public class HelloOCV {
 			dist2Target = 0;
 			angOfIncT = 0;
 			angOfIncR = 0;
+			angleTrajectory = 0;
 			imageQuality = 0;
 		}
 	}
@@ -393,6 +397,16 @@ public class HelloOCV {
 		angOfIncR = Math.atan(angOfIncR / dist2Target);
 		// Convert to degrees
 		angOfIncR = RAD_TO_DEG * angOfIncR;
+		
+		// While a bit complicated, calculate an angle of trajectory for the robot
+		double isectDist = 0;	// Intended intersection for straight line trajectory
+		double effSinAngle = 0;
+		double angleOffTgt = 0;
+		effSinAngle = Math.sin(angOfIncT * 2 * 3.141592654 / 360);
+		isectDist = (effSinAngle * ROBOT_TURN_RADIUS + DISTANCE_ON_COURSE) * effSinAngle;
+		angleOffTgt = Math.atan(isectDist / dist2Target) * 360 / 2 / 3.141592654;
+		angleTrajectory = angleOffTgt + angOfIncR;
+		System.out.println("The recommended change of course in degrees is " + Double.toString(angleTrajectory));
 	}
 
 	private static void initializeForNextImage() {
@@ -469,9 +483,9 @@ public class HelloOCV {
 		//jpgFile = new String("KitchLtOn20in60d.jpg");
 		//jpgFile = new String("KitchLtOn46in45d.jpg");
 		//jpgFile = new String("OriginalVImage.jpg");
-		//jpgFile = new String("LTGym6f45d.jpg");
+		jpgFile = new String("LTGym6f45d.jpg");
 		//jpgFile = new String("LTGym6f70d.jpg");
-		jpgFile = new String("LTGym8ft.jpg");
+		//jpgFile = new String("LTGym8ft.jpg");
 		//jpgFile = new String("LTGym18ft.jpg");  // No lines found
 
 		lastTestInCalbrPh = false;
@@ -938,6 +952,9 @@ public class HelloOCV {
 	private static void calcTargetDistance() {
 		// Note:  This will have to be corrected as it currently assumes a 90 degree angle of incidence
 		obsTgtW = (nomXTgt2R - nomXTgt1L);
+		if (obsTgtW > estTgtW ) {
+			obsTgtW = estTgtW;
+		}
 		angOfIncT = Math.acos(obsTgtW / estTgtW) * RAD_TO_DEG;
 		
 		System.out.println("The estimated angle of incidence (in degrees) for the target is " + Double.toString(angOfIncT));
