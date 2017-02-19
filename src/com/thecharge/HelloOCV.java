@@ -303,43 +303,52 @@ public class HelloOCV {
 			// Assemble line segments into groups with an effective length, determining the number of line groups = vLineSet + 1
 			groupVerticalLines(xAvgDiff, targetLines, totalizedVerticalLen, nominalVerticalLineX);
 			
-			// Find the longest contiguous chain of lines for each vertical line group identified
-			double[] yMinVerticalLine = new double[ocvLineCount]; // Minimum y coordinate of the particular vertical line
-			double[] yMaxVerticalLine = new double[ocvLineCount]; // Maximum y coordinate of the particular vertical line
-			double[] yMinVerticalLineSet = new double[ocvLineCount]; // Minimum y coordinate of the particular vertical line set
-			double[] yMaxVerticalLineSet = new double[ocvLineCount]; // Maximum y coordinate of the particular vertical line set
-			
-			// Evaluating the various vertical line segments, look for contiguous sets that might constitute part of the target
-			findLongestContiguousVLines(targetLines, nominalVerticalLineX, yMinVerticalLine, yMaxVerticalLine, yMinVerticalLineSet, yMaxVerticalLineSet);
-			
-			// While we hope for four vertical lines, choose the best four if there are more
-			findFourBestVLines(totalizedVerticalLen, nominalVerticalLineX);
-			
-			// Find the horizontal lines of the targets
-			double[] xMinHorizontalLine = new double[ocvLineCount]; // Minimum y coordinate of the particular vertical line
-			double[] xMaxHorizontalLine = new double[ocvLineCount]; // Maximum y coordinate of the particular vertical line
-			double[] xMinHorizontalLineSet = new double[ocvLineCount]; // Minimum y coordinate of the particular vertical line set
-			double[] xMaxHorizontalLineSet = new double[ocvLineCount]; // Maximum y coordinate of the particular vertical line set
-			
-			// Having chosen our four best lines, determine where we'll look for our horizontal boundaries of the targets
-			findHorizontalLines(edgeID, targetLines, nominalVerticalLineX, yMinVerticalLineSet, yMaxVerticalLineSet, xMinHorizontalLine, xMaxHorizontalLine, xMinHorizontalLineSet, xMaxHorizontalLineSet);
-			
-			generateGripImage(gp);
-			
-			// Using x,y pairs from predefined positions within the line segments, perform a line fit for target top and bottom 
-			findLineFit(image, edgeID, targetLines);
-			
-			saveLineData(xAvgDiff, edgeID, targetLines, totalizedVerticalLen, nominalVerticalLineX, yMinVerticalLineSet, yMaxVerticalLineSet, xMinHorizontalLineSet, xMaxHorizontalLineSet);
-			
-			printLineFit();
-			
-			calcAngOfIncR();
-			
-			calcTargetDistance();
-			
-			// For the case where we want to analyze a series of tuning choices, record the results to a file
-			recordAnalysisResults();
-			
+			if (vLineSet < 3) {
+				// Capture the image for later analysis
+				
+				// Estimate the distance to the target based on the available information
+				
+				// Reduce the certainty of the analysis signficantly
+				recordAnalysisResults();
+				
+			} else {
+				// Find the longest contiguous chain of lines for each vertical line group identified
+				double[] yMinVerticalLine = new double[ocvLineCount]; // Minimum y coordinate of the particular vertical line
+				double[] yMaxVerticalLine = new double[ocvLineCount]; // Maximum y coordinate of the particular vertical line
+				double[] yMinVerticalLineSet = new double[ocvLineCount]; // Minimum y coordinate of the particular vertical line set
+				double[] yMaxVerticalLineSet = new double[ocvLineCount]; // Maximum y coordinate of the particular vertical line set
+				
+				// Evaluating the various vertical line segments, look for contiguous sets that might constitute part of the target
+				findLongestContiguousVLines(targetLines, nominalVerticalLineX, yMinVerticalLine, yMaxVerticalLine, yMinVerticalLineSet, yMaxVerticalLineSet);
+				
+				// While we hope for four vertical lines, choose the best four if there are more
+				findFourBestVLines(totalizedVerticalLen, nominalVerticalLineX);
+				
+				// Find the horizontal lines of the targets
+				double[] xMinHorizontalLine = new double[ocvLineCount]; // Minimum y coordinate of the particular vertical line
+				double[] xMaxHorizontalLine = new double[ocvLineCount]; // Maximum y coordinate of the particular vertical line
+				double[] xMinHorizontalLineSet = new double[ocvLineCount]; // Minimum y coordinate of the particular vertical line set
+				double[] xMaxHorizontalLineSet = new double[ocvLineCount]; // Maximum y coordinate of the particular vertical line set
+				
+				// Having chosen our four best lines, determine where we'll look for our horizontal boundaries of the targets
+				findHorizontalLines(edgeID, targetLines, nominalVerticalLineX, yMinVerticalLineSet, yMaxVerticalLineSet, xMinHorizontalLine, xMaxHorizontalLine, xMinHorizontalLineSet, xMaxHorizontalLineSet);
+				
+				generateGripImage(gp);
+				
+				// Using x,y pairs from predefined positions within the line segments, perform a line fit for target top and bottom 
+				findLineFit(image, edgeID, targetLines);
+				
+				saveLineData(xAvgDiff, edgeID, targetLines, totalizedVerticalLen, nominalVerticalLineX, yMinVerticalLineSet, yMaxVerticalLineSet, xMinHorizontalLineSet, xMaxHorizontalLineSet);
+				
+				printLineFit();
+				
+				calcAngOfIncR();
+				
+				calcTargetDistance();
+				
+				// For the case where we want to analyze a series of tuning choices, record the results to a file
+				recordAnalysisResults();
+			}
 		} else {
 			dist2Target = 0;
 			angOfIncT = 0;
@@ -1704,15 +1713,17 @@ public class HelloOCV {
 		}
 
 		// Now analyze the rest of the lines
-		for (int x = 1; x < ocvLineCount; x++) {
+		for (int x = 1; x <= ocvLineCount; x++) {
 
+			// Allow a troubleshooting break point
 			if (x == 6) {
 				userStop = true;
 			}
+			
 			// Note that we do nothing for non-vertical lines
 			if (xAvgDiff[x] > isSameLine) {
 				// The line is vertical and assessed to be the first in the next group of vertical lines
-				// Capture the cumulative assessment of the line length
+				// Capture the cumulative assessment of the line length for the previous group of lines
 				totalizedVerticalLen[vLineSet] = cumulLen;
 
 				// Reset the cumulative determination to the length of the next line
@@ -1724,17 +1735,30 @@ public class HelloOCV {
 				if (TROUBLESHOOTING_MODE) System.out.println("This line of length " + Double.toString(totalizedVerticalLen[vLineSet]));
 				if (TROUBLESHOOTING_MODE) System.out.println("Its position is roughly " + Double.toString(nominalVerticalLineX[vLineSet]));
 				
-				// Capture the x coordinate for the first line in the new group
-				firstAdjVerticalline = targetLines[x].xAvg;
-				lastAdjVerticalline = targetLines[x].xAvg;
+				// Having closed out the last group of lines, if this is both the first and the last we wrap up
+				if (x == ocvLineCount) {
+					// Capture the cumulative assessment of the line length
+					totalizedVerticalLen[vLineSet] = targetLines[x].length;
+
+					// Capture the nominal x coordinate
+					nominalVerticalLineX[vLineSet] = targetLines[x].xAvg;
+					
+					if (TROUBLESHOOTING_MODE) System.out.println("This line of length " + Double.toString(totalizedVerticalLen[vLineSet]));
+					if (TROUBLESHOOTING_MODE) System.out.println("Its position is roughly " + Double.toString(nominalVerticalLineX[vLineSet]));
+					
+					
+				} else {
+					// Increment the count of grouped lines
+					vLineSet += 1;
+					
+					// Capture the x coordinate for the first line in the new group
+					firstAdjVerticalline = targetLines[x].xAvg;
+					lastAdjVerticalline = targetLines[x].xAvg;
+					
+				}
 				
-				// Increment the count of grouped lines
-				vLineSet += 1;
-			} 
-			else if (targetLines[x].isVertical()) 
-			{
-				// The line is vertical but is close enough in proximity to
-				// suggest it's the same line
+			} else if (targetLines[x].isVertical())	{	
+				// The line is vertical but is close enough in proximity to suggest it's the same line
 				cumulLen += targetLines[x].length;
 				if (TROUBLESHOOTING_MODE) System.out.println("Expanded to " + Double.toString(cumulLen));
 				lastAdjVerticalline = targetLines[x].xAvg;
@@ -1743,45 +1767,22 @@ public class HelloOCV {
 				if (firstAdjVerticalline == 0) {
 					firstAdjVerticalline = lastAdjVerticalline;
 				}
+				
+				// Consider whether any additional handling is required if this happens to be the last line
+				if (x == ocvLineCount) {
+					totalizedVerticalLen[vLineSet] = cumulLen;
+					
+					// Capture the nominal x coordinate
+					nominalVerticalLineX[vLineSet] = (lastAdjVerticalline + firstAdjVerticalline) / 2;
+					
+					if (TROUBLESHOOTING_MODE) System.out.println("The last line is of length " + Double.toString(totalizedVerticalLen[vLineSet]));
+					if (TROUBLESHOOTING_MODE) System.out.println("Its position is roughly " + Double.toString(nominalVerticalLineX[vLineSet]));
+					
+				}
 			}
-			// Note:  In this loop, nothing happens for lines that aren't vertical
 		}
 
-		// We may need to record the length of the last Vertical line group
-		if ((xAvgDiff[(ocvLineCount - 1)] <= isSameLine) || (!targetLines[ocvLineCount - 1].isVertical())) {
-			// This means that this line was part of the last vertical line group
-			totalizedVerticalLen[vLineSet] = cumulLen;
-			
-			// Capture the nominal x coordinate
-			nominalVerticalLineX[vLineSet] = (lastAdjVerticalline + firstAdjVerticalline) / 2;
-			
-			if (TROUBLESHOOTING_MODE) System.out.println("The last line is of length " + Double.toString(totalizedVerticalLen[vLineSet]));
-			if (TROUBLESHOOTING_MODE) System.out.println("Its position is roughly " + Double.toString(nominalVerticalLineX[vLineSet]));
-		} else if ((xAvgDiff[(ocvLineCount - 1)] >= isSameLine) && (targetLines[ocvLineCount - 1].isVertical())) {
-			totalizedVerticalLen[vLineSet] = cumulLen;
-			
-			// Capture the nominal x coordinate
-			nominalVerticalLineX[vLineSet] = targetLines[ocvLineCount - 1].xAvg;
-			
-			if (TROUBLESHOOTING_MODE) System.out.println("The last line is of length " + Double.toString(totalizedVerticalLen[vLineSet]));
-			if (TROUBLESHOOTING_MODE) System.out.println("Its position is roughly " + Double.toString(nominalVerticalLineX[vLineSet]));
-			
-		}
-
-		// Estimate the actual length of the lines identified
-		
 		if (TROUBLESHOOTING_MODE) System.out.println("The number of line sets is " + Integer.toString(vLineSet + 1));
-		// What do we do if we don't find at least 4 lines
-		//TODO: Account for a situation where there are less than 4 vertical line sets
-		if (vLineSet < 3) {
-			//throw new Exception("vLineSet is less than 3 (less than 4 vertical lines).");
-			if (dist2Target < .5) {
-				//DriveXFeet(.5)
-			}
-			else{
-				//Adjust the robot
-			}
-		}
 		if (TROUBLESHOOTING_MODE) System.out.println();
 	}
 
