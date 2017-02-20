@@ -60,12 +60,12 @@ public class HelloOCV {
 	private static double tanHlfAngleH = Math.tan(Math.toRadians(HALF_FIELD_ANGLE_H));
 	private static double tanHlfAngleV = Math.tan(Math.toRadians(HALF_FIELD_ANGLE_V));
 	private static double dist2Target = 0;	// Calculated distance to the target in inches
-	private static final double INITIAL_LO_HUE = 83;	//40,65,68,32, 73;		//74;
-	private static final double INITIAL_HI_HUE = 91;	//142,120,117, 103;	//96;	// 93.99317406143345;
-	private static final double INITIAL_LO_SATURATION = 43;	//156,211, 14;	//40;	//45.86330935251798;
-	private static final double INITIAL_HI_SATURATION = 218;	//255, 255;	//140;	//153;	// 128.80546075085323;
-	private static final double INITIAL_LO_LUMIN = 71;	//89,99,66, 135;	//80.26079136690647;
-	private static final double INITIAL_HI_LUMIN = 129;	//133,255,166, 235;	//163.61774744027304;
+	private static final double INITIAL_LO_HUE = 40;	//40,65,68,32, 73;		//74;
+	private static final double INITIAL_HI_HUE = 79;	//142,120,117, 103;	//96;	// 93.99317406143345;
+	private static final double INITIAL_LO_SATURATION = 1;	//156,211, 14;	//40;	//45.86330935251798;
+	private static final double INITIAL_HI_SATURATION = 254;	//255, 255;	//140;	//153;	// 128.80546075085323;
+	private static final double INITIAL_LO_LUMIN = 89;	//89,99,66, 135;	//80.26079136690647;
+	private static final double INITIAL_HI_LUMIN = 255;	//133,255,166, 235;	//163.61774744027304;
 	private static boolean lastTestInCalbrPh = false;
 	private static double loHue = 0;	// 81 from optimization;
 	private static double hiHue = 0;	// 93.99317406143345;
@@ -479,12 +479,12 @@ public class HelloOCV {
 		//jpgFile = new String("LTGym3ft.jpg");	
 		//jpgFile = new String("Kitchen58inLt.jpg");
 		//jpgFile = new String("KitchLtOn20in60d.jpg");
-		//jpgFile = new String("KitchLtOn46in45d.jpg");
+		jpgFile = new String("KitchLtOn46in45d.jpg");
 		//jpgFile = new String("OriginalVImage.jpg");
 		//jpgFile = new String("LTGym6f45d.jpg");
 		//jpgFile = new String("LTGym6f70d.jpg");
 		//jpgFile = new String("LTGym8ft.jpg");
-		jpgFile = new String("LTGym18ft.jpg"); 
+		//jpgFile = new String("LTGym18ft.jpg"); 
 
 		// By default, we clear this variable and only set it if applicable
 		lastTestInCalbrPh = false;
@@ -658,6 +658,8 @@ public class HelloOCV {
 				
 			} else if (calibrPhase >= 99) {
 
+				calibrPass = MAX_CALIBR_PASS;
+				
 				// Choose an efficient means to repetitively append an analysis file (append here)
 				try(PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter("calibr_data.txt", true)))) {
 					String LineOut;
@@ -728,6 +730,7 @@ public class HelloOCV {
 
 			
 			}
+			
 			// As a last step in the calibration pass, determine when we go to the next calibration phase
 			if (calibrPass == 1) {
 				lastScore = imageQuality;
