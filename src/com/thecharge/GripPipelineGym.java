@@ -31,6 +31,7 @@ public class GripPipelineGym /*implements VisionPipeline*/ {
 	private Mat hslThresholdOutput = new Mat();
 	private ArrayList<Line> findLinesOutput = new ArrayList<Line>();
 	//private ArrayList<Line> filterLinesOutput = new ArrayList<Line>();
+	private static final boolean RUNNING_IMAGE_CAPTURE = true;
 
 	static {
 		
@@ -52,7 +53,7 @@ public class GripPipelineGym /*implements VisionPipeline*/ {
 		hslThreshold(hslThresholdInput, hslThresholdHue, hslThresholdSaturation, hslThresholdLuminance, hslThresholdOutput);
 
 		// Save the output of the HSL processing
-		Imgcodecs.imwrite("HSL_Output_Image.jpg", hslThresholdOutput);
+		if (!RUNNING_IMAGE_CAPTURE) Imgcodecs.imwrite("HSL_Output_Image.jpg", hslThresholdOutput);
 
 		// Step Find_Lines0:
 		Mat findLinesInput = hslThresholdOutput;

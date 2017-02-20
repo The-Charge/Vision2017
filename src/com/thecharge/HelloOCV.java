@@ -24,10 +24,11 @@ import com.thecharge.GripPipelineGym.Line;
 import edu.wpi.first.wpilibj.networktables.NetworkTable;
 
 public class HelloOCV {
-	private static final boolean TROUBLESHOOTING_MODE = true;
-	private static final boolean CALIBRATION_MODE = false;
+	private static final boolean TROUBLESHOOTING_MODE = false;
+	private static final boolean CALIBRATION_MODE = true;
+	private static final Integer MAX_CALIBR_PASS = 999;
 	private static final boolean USE_VIDEO = false;
-	private static final boolean JPGS_TO_C = true;
+	private static final boolean JPGS_TO_C = false;
 	private static boolean userStop = false;
 	private static final double INCH_GAP_BETW = 6.25; // Distance between reflective targets
 	private static final double INCH_TGT_WIDE = 2; // Width of the reflective target
@@ -60,11 +61,11 @@ public class HelloOCV {
 	private static double tanHlfAngleV = Math.tan(Math.toRadians(HALF_FIELD_ANGLE_V));
 	private static double dist2Target = 0;	// Calculated distance to the target in inches
 	private static final double INITIAL_LO_HUE = 83;	//40,65,68,32, 73;		//74;
-	private static final double INITIAL_HI_HUE = 109;	//142,120,117, 103;	//96;	// 93.99317406143345;
-	private static final double INITIAL_LO_SATURATION = 44;	//156,211, 14;	//40;	//45.86330935251798;
-	private static final double INITIAL_HI_SATURATION = 255;	//255, 255;	//140;	//153;	// 128.80546075085323;
-	private static final double INITIAL_LO_LUMIN = 76;	//89,99,66, 135;	//80.26079136690647;
-	private static final double INITIAL_HI_LUMIN = 192;	//133,255,166, 235;	//163.61774744027304;
+	private static final double INITIAL_HI_HUE = 91;	//142,120,117, 103;	//96;	// 93.99317406143345;
+	private static final double INITIAL_LO_SATURATION = 43;	//156,211, 14;	//40;	//45.86330935251798;
+	private static final double INITIAL_HI_SATURATION = 218;	//255, 255;	//140;	//153;	// 128.80546075085323;
+	private static final double INITIAL_LO_LUMIN = 71;	//89,99,66, 135;	//80.26079136690647;
+	private static final double INITIAL_HI_LUMIN = 129;	//133,255,166, 235;	//163.61774744027304;
 	private static boolean lastTestInCalbrPh = false;
 	private static double loHue = 0;	// 81 from optimization;
 	private static double hiHue = 0;	// 93.99317406143345;
@@ -191,7 +192,7 @@ public class HelloOCV {
 		if (CALIBRATION_MODE) {
 			calibrPass = 0;
 		} else {
-			calibrPass = 99;	// Typically we use 99 to execute one time;
+			calibrPass = MAX_CALIBR_PASS;	// Typically we use 99 to execute one time;
 		}
 		
 		do {
@@ -202,7 +203,17 @@ public class HelloOCV {
 				
 				// Load a test image from file for development
 				image = Imgcodecs.imread(jpgFile);
+				
 
+				/*
+				// Experiment with reading a wmv file rather than a jpg
+				VideoCapture cap = null;
+				cap = new VideoCapture("GymCartApprch.wmv");
+				cap.open("GymCartApprch.wmv");
+				cap.read(image);
+				*/
+				
+				
 			} 
 			else
 				camera.read(image);
@@ -213,7 +224,7 @@ public class HelloOCV {
 			// Having concluded analysis, update the Network Tables
 			//table2Rbt.putNumber("Distance", dist2Target/12);
 			//table2Rbt.putNumber("RobotAngle", angOfIncR);
-			//table2Rbt.putNumber("TargetAngle", angOfIncT);
+			//table2Rbt.putNumber("TargetAngle", angleTrajectory);
 			//table2Rbt.putNumber("Quality", imageQuality);
 			//table2Rbt.putNumber("ImageCount", executionCount);
 			
@@ -221,7 +232,7 @@ public class HelloOCV {
 			initializeForNextImage();
 			executionCount ++;
 			
-		} while ((calibrPass < 99) || (USE_VIDEO));
+		} while ((calibrPass < MAX_CALIBR_PASS) || (USE_VIDEO));
 		//} while (executionCount < 1);
 			
 		if (USE_VIDEO)
@@ -241,10 +252,6 @@ public class HelloOCV {
 		// Create a List (special Java Collection) of "line" type entries from
 		// the specified image processing class
 		ArrayList<Line> lines = gp.findLinesOutput();
-		
-		
-		
-		
 		
 		
 		// Continue processing only if we're getting an image
@@ -398,15 +405,6 @@ public class HelloOCV {
 		// Convert to degrees
 		angOfIncR = RAD_TO_DEG * angOfIncR;
 		
-		// While a bit complicated, calculate an angle of trajectory for the robot
-		double isectDist = 0;	// Intended intersection for straight line trajectory
-		double effSinAngle = 0;
-		double angleOffTgt = 0;
-		effSinAngle = Math.sin(angOfIncT * 2 * 3.141592654 / 360);
-		isectDist = (effSinAngle * ROBOT_TURN_RADIUS + DISTANCE_ON_COURSE) * effSinAngle;
-		angleOffTgt = Math.atan(isectDist / dist2Target) * 360 / 2 / 3.141592654;
-		angleTrajectory = angleOffTgt + angOfIncR;
-		System.out.println("The recommended change of course in degrees is " + Double.toString(angleTrajectory));
 	}
 
 	private static void initializeForNextImage() {
@@ -483,11 +481,12 @@ public class HelloOCV {
 		//jpgFile = new String("KitchLtOn20in60d.jpg");
 		//jpgFile = new String("KitchLtOn46in45d.jpg");
 		//jpgFile = new String("OriginalVImage.jpg");
-		jpgFile = new String("LTGym6f45d.jpg");
+		//jpgFile = new String("LTGym6f45d.jpg");
 		//jpgFile = new String("LTGym6f70d.jpg");
 		//jpgFile = new String("LTGym8ft.jpg");
-		//jpgFile = new String("LTGym18ft.jpg");  // No lines found
+		jpgFile = new String("LTGym18ft.jpg"); 
 
+		// By default, we clear this variable and only set it if applicable
 		lastTestInCalbrPh = false;
 		
 		// The first pass (analysisPassCount = 0), create a set of tests but take the use the defined initial set
@@ -506,28 +505,82 @@ public class HelloOCV {
 				optLoLum = INITIAL_LO_LUMIN;
 				optHiLum = INITIAL_HI_LUMIN;
 			} else {
+				
 				// For all subsequent passes, instantiate the next set in the series
 				if (calibrPhase == 0) {
 					
 					// See if narrowing the low Hue results in results that are better or worse than our best
-					loHue = loHue + 1;
+					loHue += 1;
+					if (loHue >= (hiHue - 1)) lastTestInCalbrPh = true;
+					
 				} else if (calibrPhase == 1) {
 					
 					// See if expanding the low Hue results in results that are better or worse than our best
-					if (loHue > INITIAL_LO_HUE) {
-						loHue = INITIAL_LO_HUE - 1;
-					} else {
-						loHue -= 1;
-					}
+					loHue -= 1;
+					if (loHue <=  32) lastTestInCalbrPh = true;
+					
 				} else if (calibrPhase == 2) {
 					
 					// See if expanding the high Hue results in results that are better or worse than our best
-					if (loHue < INITIAL_LO_HUE) {
-						loHue = INITIAL_LO_HUE;
-					} 
+					hiHue += 1;
+					if (hiHue >= 255) lastTestInCalbrPh = true;
+					
+				} else if (calibrPhase == 3) {
+					
+					// See if expanding the low Hue results in results that are better or worse than our best
 					hiHue -= 1;
+					if (hiHue <=  (loHue + 1)) lastTestInCalbrPh = true;
+					
+				} else if (calibrPhase == 4) {
+					
+					// See if expanding the high Hue results in results that are better or worse than our best
+					loSat += 1;
+					if (loSat >= (hiSat - 1)) lastTestInCalbrPh = true;
+					
+				} else if (calibrPhase == 5) {
+					
+					// See if expanding the low Hue results in results that are better or worse than our best
+					loSat -= 1;
+					if (loSat <=  1) lastTestInCalbrPh = true;
+					
+				} else if (calibrPhase == 6) {
+					
+					// See if expanding the high Hue results in results that are better or worse than our best
+					hiSat += 1;
+					if (hiSat >= 255) lastTestInCalbrPh = true;
+					
+				} else if (calibrPhase == 7) {
+					
+					// See if expanding the low Hue results in results that are better or worse than our best
+					hiSat -= 1;
+					if (hiSat <=  (loSat + 1)) lastTestInCalbrPh = true;
+					
+				} else if (calibrPhase == 8) {
+					
+					// See if expanding the high Hue results in results that are better or worse than our best
+					loLum += 1;
+					if (loLum >= (hiLum - 1)) lastTestInCalbrPh = true;
+					
+				} else if (calibrPhase == 9) {
+					
+					// See if expanding the low Hue results in results that are better or worse than our best
+					loLum -= 1;
+					if (loLum <=  1) lastTestInCalbrPh = true;
+					
+				} else if (calibrPhase == 10) {
+					
+					// See if expanding the high Hue results in results that are better or worse than our best
+					hiLum += 1;
+					if (hiLum >= 255) lastTestInCalbrPh = true;
+					
+				} else if (calibrPhase == 11) {
+					
+					// See if expanding the low Hue results in results that are better or worse than our best
+					hiLum -= 1;
+					if (hiLum <=  (loLum + 1)) lastTestInCalbrPh = true;
+					
 				} else {
-					calibrPhase = 99;	// Signaling the end if calibration.  Save the result
+					calibrPhase = (MAX_CALIBR_PASS + 1);	// Signaling the end if calibration.  Save the result
 				}
 			}
 		} else {
@@ -581,6 +634,9 @@ public class HelloOCV {
 		if (imageQuality > 1) {
 			imageQuality = 1;
 		}
+		
+		if (TROUBLESHOOTING_MODE) System.out.println("The analysis confidence value was " + Double.toString(imageQuality));
+
 		
 		if (CALIBRATION_MODE) {
 			calibrScore = imageQuality;
@@ -676,20 +732,39 @@ public class HelloOCV {
 			if (calibrPass == 1) {
 				lastScore = imageQuality;
 			} else {
-				if (imageQuality < lastScore) {
+				if (imageQuality < (0.5 * optimumQuality)) {
 					calibrPhase ++;
-					lastScore = 0;
+					optimumQuality = 0;
+					
+					// Restore the optimum values
+					loHue = optLoHue;
+					hiHue = optHiHue;
+					loSat = optLoSat;
+					hiSat = optHiSat;
+					loLum = optLoLum;
+					hiLum = optHiLum;
+					
 				} else {
 					lastScore = imageQuality;
 				}
 			}
 			
-			if ((calibrPhase == 1) && (loHue <= 1)) {
-				calibrPhase ++;
-				lastScore = 0;
+			// If we've just finished testing the last value for the current phase, move to the next
+			if (lastTestInCalbrPh) {
+				calibrPhase++;
+				
+				// Restore the optimum values
+				loHue = optLoHue;
+				hiHue = optHiHue;
+				loSat = optLoSat;
+				hiSat = optHiSat;
+				loLum = optLoLum;
+				hiLum = optHiLum;
+				
 			}
 			
 			if (calibrPass < 100) calibrPass ++;
+			
 		}
 	}
 	
@@ -957,10 +1032,23 @@ public class HelloOCV {
 		}
 		angOfIncT = Math.acos(obsTgtW / estTgtW) * RAD_TO_DEG;
 		
+		
+		// While a bit complicated, calculate an angle of trajectory for the robot
+		double isectDist = 0;	// Intended intersection for straight line trajectory
+		double effSinAngle = 0;
+		double angleOffTgt = 0;
+		effSinAngle = Math.sin(angOfIncT / RAD_TO_DEG);
+		isectDist = (effSinAngle * ROBOT_TURN_RADIUS + DISTANCE_ON_COURSE) * effSinAngle;
+		angleOffTgt = Math.atan(isectDist / dist2Target) * RAD_TO_DEG;
+		angleTrajectory = angleOffTgt + angOfIncR;
+		if (angleTrajectory > (HALF_FIELD_ANGLE_H/2)) angleTrajectory = (HALF_FIELD_ANGLE_H/2);
+		System.out.println("The recommended change of course in degrees is " + Double.toString(angleTrajectory));
+
+		
+		
 		System.out.println("The estimated angle of incidence (in degrees) for the target is " + Double.toString(angOfIncT));
 		System.out.println("The estimated angle of incidence (in degrees) for the robot is " + Double.toString(angOfIncR));
 		
-		//table2Rbt.}
 	}
 	
 	private static void saveLineData(double[] xAvgDiff, String[] edgeID, TargetLine[] targetLines,
