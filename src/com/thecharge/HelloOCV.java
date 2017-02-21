@@ -26,7 +26,7 @@ import edu.wpi.first.wpilibj.networktables.NetworkTable;
 public class HelloOCV {
 	private static final boolean TROUBLESHOOTING_MODE = true;
 	private static final boolean CALIBRATION_MODE = false;
-	private static final Integer MAX_CALIBR_PASS = 999;
+	private static final int MAX_CALIBR_PASS = 999;
 	private static final boolean USE_VIDEO = false;
 	private static final boolean JPGS_TO_C = true;
 	private static boolean userStop = false;
@@ -60,14 +60,15 @@ public class HelloOCV {
 	private static double tanHlfAngleH = Math.tan(Math.toRadians(HALF_FIELD_ANGLE_H));
 	private static double tanHlfAngleV = Math.tan(Math.toRadians(HALF_FIELD_ANGLE_V));
 	private static double dist2Target = 0;	// Calculated distance to the target in inches
-	private static final double INITIAL_LO_HUE = 71;	//40,65,68,32, 73;		//74;
-	private static final double INITIAL_HI_HUE = 110;	//142,120,117, 103;	//96;	// 93.99317406143345;
-	private static final double INITIAL_LO_SATURATION = 17;	//156,211, 14;	//40;	//45.86330935251798;
-	private static final double INITIAL_HI_SATURATION = 253;	//255, 255;	//140;	//153;	// 128.80546075085323;
-	private static final double INITIAL_LO_LUMIN = 12;	//89,99,66, 135;	//80.26079136690647;
-	private static final double INITIAL_HI_LUMIN = 255;	//133,255,166, 235;	//163.61774744027304;
+	private static final double INITIAL_LO_HUE = 62;	//40,65,68,32, 73;		//74;
+	private static final double INITIAL_HI_HUE = 96;	//142,120,117, 103;	//96;	// 93.99317406143345;
+	private static final double INITIAL_LO_SATURATION = 57;	//156,211, 14;	//40;	//45.86330935251798;
+	private static final double INITIAL_HI_SATURATION = 255;	//255, 255;	//140;	//153;	// 128.80546075085323;
+	private static final double INITIAL_LO_LUMIN = 71;	//89,99,66, 135;	//80.26079136690647;
+	private static final double INITIAL_HI_LUMIN = 185;	//133,255,166, 235;	//163.61774744027304;
 	//LTGym8ft => 81 / 114 / 7 / 140 / 85 / 254
 	//BreakRoom => 71 / 110 / 17 / 253 / 12 / 255
+	//LTGym6f70d.jpg => 83 / 102 / 57 / 255 / 71 / 185
 	private static boolean lastTestInCalbrPh = false;
 	private static double loHue = 0;	// 81 from optimization;
 	private static double hiHue = 0;	// 93.99317406143345;
@@ -133,6 +134,7 @@ public class HelloOCV {
 	private static double optimumQuality = 0;
 	private static double lastScore = 0;
 	private static long executionCount = 0;
+	private static int poorImageCount = 0;
 	private static Mat hslTO;
 
 	
@@ -223,13 +225,6 @@ public class HelloOCV {
 			// Having selected a source, process the image (this is the dominant call)
 			processSingleImage(image);
 			
-			// Having concluded analysis, update the Network Tables
-			//table2Rbt.putNumber("Distance", dist2Target/12);
-			//table2Rbt.putNumber("RobotAngle", angOfIncR);
-			//table2Rbt.putNumber("TargetAngle", angleTrajectory);
-			//table2Rbt.putNumber("Quality", imageQuality);
-			//table2Rbt.putNumber("ImageCount", executionCount);
-			
 			// Moving to continuous mode (or even calibration, some variables will need to be reset
 			initializeForNextImage();
 			executionCount ++;
@@ -317,8 +312,15 @@ public class HelloOCV {
 			
 			if (vLineSet < 3) {
 				// Capture the image for later analysis
-				
-				// Estimate the distance to the target based on the available information
+				if (vLineSet > 0) {
+					if (poorImageCount == 0) {
+						Imgcodecs.imwrite("Image_for_PostAnalysis.jpg", image);
+					}
+					poorImageCount++;
+
+					// Estimate the distance to the target based on the available information
+					
+				}
 				
 				// Reduce the certainty of the analysis significantly
 				recordAnalysisResults();
@@ -484,10 +486,10 @@ public class HelloOCV {
 		//jpgFile = new String("KitchLtOn46in45d.jpg");
 		//jpgFile = new String("OriginalVImage.jpg");
 		//jpgFile = new String("LTGym6f45d.jpg");
-		//jpgFile = new String("LTGym6f70d.jpg");
+		jpgFile = new String("LTGym6f70d.jpg");
 		//jpgFile = new String("LTGym8ft.jpg");
 		//jpgFile = new String("LTGym18ft.jpg"); 
-		jpgFile = new String("BreakRoom.jpg");
+		//jpgFile = new String("BreakRoom.jpg");
 
 		// By default, we clear this variable and only set it if applicable
 		lastTestInCalbrPh = false;
@@ -630,6 +632,11 @@ public class HelloOCV {
 		if (lTgtAccrW > 1) imageQuality -= (lTgtAccrW - 1);
 		if (rTgtAccrW > 1) imageQuality -= (rTgtAccrW - 1);
 		
+		if (dist2Target > 1) {
+			imageQuality += .1;
+		} else {
+			imageQuality = 0.1 * imageQuality;
+		}
 		if (imageQuality < 0) {
 			imageQuality = 0;
 		}
@@ -1034,10 +1041,14 @@ public class HelloOCV {
 		// Note:  This will have to be corrected as it currently assumes a 90 degree angle of incidence
 		obsTgtW = (nomXTgt2R - nomXTgt1L);
 		if (obsTgtW > estTgtW ) {
+			// Not a realistic solution so impose an upper limit
 			obsTgtW = estTgtW;
 		}
-		angOfIncT = Math.acos(obsTgtW / estTgtW) * RAD_TO_DEG;
 		
+		angOfIncT = Math.acos(obsTgtW / estTgtW) * RAD_TO_DEG;
+		if ((yAtXFitTR - yAtXFitBR) > (yAtXFitTL - yAtXFitBL)) {
+			angOfIncT = -angOfIncT;
+		}
 		
 		// While a bit complicated, calculate an angle of trajectory for the robot
 		double isectDist = 0;	// Intended intersection for straight line trajectory
