@@ -27,7 +27,7 @@ public class HelloOCV {
 	private static final boolean TROUBLESHOOTING_MODE = true;
 	private static final boolean CALIBRATION_MODE = false;
 	private static final int MAX_CALIBR_PASS = 999;
-	private static final boolean USE_VIDEO = false;
+	private static final boolean USE_VIDEO = true;
 	private static final boolean JPGS_TO_C = true;
 	private static boolean userStop = false;
 	private static final double INCH_GAP_BETW = 6.25; // Distance between reflective targets
@@ -60,15 +60,16 @@ public class HelloOCV {
 	private static double tanHlfAngleH = Math.tan(Math.toRadians(HALF_FIELD_ANGLE_H));
 	private static double tanHlfAngleV = Math.tan(Math.toRadians(HALF_FIELD_ANGLE_V));
 	private static double dist2Target = 0;	// Calculated distance to the target in inches
-	private static final double INITIAL_LO_HUE = 62;	//40,65,68,32, 73;		//74;
-	private static final double INITIAL_HI_HUE = 96;	//142,120,117, 103;	//96;	// 93.99317406143345;
-	private static final double INITIAL_LO_SATURATION = 57;	//156,211, 14;	//40;	//45.86330935251798;
-	private static final double INITIAL_HI_SATURATION = 255;	//255, 255;	//140;	//153;	// 128.80546075085323;
-	private static final double INITIAL_LO_LUMIN = 71;	//89,99,66, 135;	//80.26079136690647;
-	private static final double INITIAL_HI_LUMIN = 185;	//133,255,166, 235;	//163.61774744027304;
+	private static final double INITIAL_LO_HUE = 73;	//40,65,68,32, 73;		//74;
+	private static final double INITIAL_HI_HUE = 171;	//142,120,117, 103;	//96;	// 93.99317406143345;
+	private static final double INITIAL_LO_SATURATION = 3;	//156,211, 14;	//40;	//45.86330935251798;
+	private static final double INITIAL_HI_SATURATION = 61;	//255, 255;	//140;	//153;	// 128.80546075085323;
+	private static final double INITIAL_LO_LUMIN = 96;	//89,99,66, 135;	//80.26079136690647;
+	private static final double INITIAL_HI_LUMIN = 181;	//133,255,166, 235;	//163.61774744027304;
 	//LTGym8ft => 81 / 114 / 7 / 140 / 85 / 254
 	//BreakRoom => 71 / 110 / 17 / 253 / 12 / 255
 	//LTGym6f70d.jpg => 83 / 102 / 57 / 255 / 71 / 185
+	//BreakRoom0221 =>  73 / 171 / 3 / 61 / 96 / 181
 	private static boolean lastTestInCalbrPh = false;
 	private static double loHue = 0;	// 81 from optimization;
 	private static double hiHue = 0;	// 93.99317406143345;
@@ -139,6 +140,7 @@ public class HelloOCV {
 
 	
 	public static void main(String[] args) throws Exception {
+		Double dist2TargetTemp = 0.0;
 		System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
 		Mat image = new Mat();
 		
@@ -166,12 +168,14 @@ public class HelloOCV {
 	    	
 	    	camSetting = camera.get(Videoio.CAP_PROP_CONTRAST);	
 	    	camera.set(Videoio.CAP_PROP_CONTRAST, 90);		// 32, 66, 128, 42, 32  //11 - CV_CAP_PROP_CONTRAST Contrast of the image (only for cameras).
+	    	//camera.set(Videoio.CAP_PROP_CONTRAST, 128);		// 32, 66, 128, 42, 32  //11 - CV_CAP_PROP_CONTRAST Contrast of the image (only for cameras).
 	    	
 	    	camSetting = camera.get(Videoio.CAP_PROP_EXPOSURE);	
 	    	camera.set(Videoio.CAP_PROP_EXPOSURE, -3); 	// -1, -2 -3 -2, -1  // 15 - CV_CAP_PROP_EXPOSURE Exposure (only for cameras).
 	    	
 	    	camSetting = camera.get(Videoio.CAP_PROP_GAIN);	
 	    	camera.set(Videoio.CAP_PROP_GAIN, 16);			// 44, 9, 40, 9, 44  // 14 - CV_CAP_PROP_GAIN Gain of the image (only for cameras).
+	    	//camera.set(Videoio.CAP_PROP_GAIN, 8);			// 44, 9, 40, 9, 44  // 14 - CV_CAP_PROP_GAIN Gain of the image (only for cameras).
 	    	
 	    	camSetting = camera.get(Videoio.CAP_PROP_SATURATION);	
 	    	camera.set(Videoio.CAP_PROP_SATURATION, 255);			// 255, 209, 186, 35, 255 // 12 - CV_CAP_PROP_SATURATION Saturation of the image (only for cameras).
@@ -198,7 +202,7 @@ public class HelloOCV {
 		} else {
 			calibrPass = MAX_CALIBR_PASS;	// Typically we use 99 to execute one time;
 		}
-		
+		System.out.println("Starting");
 		do {
 			if (!USE_VIDEO) {
 				
@@ -220,18 +224,25 @@ public class HelloOCV {
 				
 			} 
 			else
+			{
+				selectNextParameterSet();
+				System.out.println("Reading next image");
 				camera.read(image);
-			
+			}
 			// Having selected a source, process the image (this is the dominant call)
 			processSingleImage(image);
 			
 			// Moving to continuous mode (or even calibration, some variables will need to be reset
+			dist2TargetTemp = dist2Target;
 			initializeForNextImage();
 			executionCount ++;
+			//System.currentTimeMillis()
 			
-		} while ((calibrPass < MAX_CALIBR_PASS) || (USE_VIDEO));
+		//} while ((calibrPass < MAX_CALIBR_PASS) || (USE_VIDEO));
 		//} while (executionCount < 1);
-			
+		//} while ((dist2Target == 0) || (Double.toString(dist2Target).equals("NaN")));
+		} while ((dist2TargetTemp == 0) || (dist2TargetTemp.isNaN()));
+		
 		if (USE_VIDEO)
 			camera.release();
 	}
@@ -369,6 +380,8 @@ public class HelloOCV {
 			angOfIncR = 0;
 			angleTrajectory = 0;
 			imageQuality = 0;
+			//System.out.println("Less than 3 lines were found in the image :" + Double.toString(ocvLineCount));
+			System.out.println("Less than 3 lines were found in the image: " + ocvLineCount);
 		}
 	}
 
@@ -486,10 +499,11 @@ public class HelloOCV {
 		//jpgFile = new String("KitchLtOn46in45d.jpg");
 		//jpgFile = new String("OriginalVImage.jpg");
 		//jpgFile = new String("LTGym6f45d.jpg");
-		jpgFile = new String("LTGym6f70d.jpg");
+		//jpgFile = new String("LTGym6f70d.jpg");
 		//jpgFile = new String("LTGym8ft.jpg");
 		//jpgFile = new String("LTGym18ft.jpg"); 
-		//jpgFile = new String("BreakRoom.jpg");
+		//jpgFile = new String("BreakRoom0221.jpg");
+		jpgFile = new String("Image_for_PostAnalysis.jpg");
 
 		// By default, we clear this variable and only set it if applicable
 		lastTestInCalbrPh = false;
