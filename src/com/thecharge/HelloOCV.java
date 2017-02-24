@@ -11,7 +11,10 @@ import java.util.Random;
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
+import org.opencv.core.Size;
 import org.opencv.core.Scalar;
+//import org.opencv.highgui.Highgui;        
+//import org.opencv.highgui.VideoCapture;        
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.video.Video;
@@ -25,10 +28,10 @@ import edu.wpi.first.wpilibj.networktables.NetworkTable;
 
 public class HelloOCV {
 	private static final boolean TROUBLESHOOTING_MODE = true;
-	private static final boolean CALIBRATION_MODE = false;
+	private static final boolean CALIBRATION_MODE = true;
 	private static final int MAX_CALIBR_PASS = 999;
-	private static final boolean USE_VIDEO = true;
-	private static final boolean JPGS_TO_C = true;
+	private static final boolean USE_VIDEO = false;
+	private static final boolean JPGS_TO_C = false;
 	private static boolean userStop = false;
 	private static final double INCH_GAP_BETW = 6.25; // Distance between reflective targets
 	private static final double INCH_TGT_WIDE = 2; // Width of the reflective target
@@ -60,16 +63,23 @@ public class HelloOCV {
 	private static double tanHlfAngleH = Math.tan(Math.toRadians(HALF_FIELD_ANGLE_H));
 	private static double tanHlfAngleV = Math.tan(Math.toRadians(HALF_FIELD_ANGLE_V));
 	private static double dist2Target = 0;	// Calculated distance to the target in inches
-	private static final double INITIAL_LO_HUE = 73;	//40,65,68,32, 73;		//74;
-	private static final double INITIAL_HI_HUE = 171;	//142,120,117, 103;	//96;	// 93.99317406143345;
+	private static final double INITIAL_LO_HUE = 65;	//40,65,68,32, 73;		//74;
+	private static final double INITIAL_HI_HUE = 92;	//142,120,117, 103;	//96;	// 93.99317406143345;
 	private static final double INITIAL_LO_SATURATION = 3;	//156,211, 14;	//40;	//45.86330935251798;
-	private static final double INITIAL_HI_SATURATION = 61;	//255, 255;	//140;	//153;	// 128.80546075085323;
-	private static final double INITIAL_LO_LUMIN = 96;	//89,99,66, 135;	//80.26079136690647;
-	private static final double INITIAL_HI_LUMIN = 181;	//133,255,166, 235;	//163.61774744027304;
+	private static final double INITIAL_HI_SATURATION = 250;	//255, 255;	//140;	//153;	// 128.80546075085323;
+	private static final double INITIAL_LO_LUMIN = 46;	//89,99,66, 135;	//80.26079136690647;
+	private static final double INITIAL_HI_LUMIN = 180;	//133,255,166, 235;	//163.61774744027304;
 	//LTGym8ft => 81 / 114 / 7 / 140 / 85 / 254
 	//BreakRoom => 71 / 110 / 17 / 253 / 12 / 255
 	//LTGym6f70d.jpg => 83 / 102 / 57 / 255 / 71 / 185
 	//BreakRoom0221 =>  73 / 171 / 3 / 61 / 96 / 181
+	private static final double INITIAL_WC_BRIGHTNESS = 128;
+	private static final double INITIAL_WC_CONTRAST = 32;
+	private static final double INITIAL_WC_EXPOSURE = -2;
+	private static final double INITIAL_WC_GAIN = 0;
+	private static final double INITIAL_WC_SATURATION = 32;
+	private static final double INITIAL_WC_WHTBALBLU = 2800;
+	private static final double INITIAL_WC_WHTBALRED = -1;
 	private static boolean lastTestInCalbrPh = false;
 	private static double loHue = 0;	// 81 from optimization;
 	private static double hiHue = 0;	// 93.99317406143345;
@@ -133,7 +143,7 @@ public class HelloOCV {
 	private static String jpgFile = "";
 	private static double imageQuality = 0;
 	private static double optimumQuality = 0;
-	private static double lastScore = 0;
+	private static double percHLFPts = 0;		// Percent of the horizontal line fit points that were found
 	private static long executionCount = 0;
 	private static int poorImageCount = 0;
 	private static Mat hslTO;
@@ -142,12 +152,14 @@ public class HelloOCV {
 	public static void main(String[] args) throws Exception {
 		Double dist2TargetTemp = 0.0;
 		System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
+		//System.loadLibrary("opencv_ffmpeg300_64");
 		Mat image = new Mat();
 		
 		VideoCapture camera = null;
 		
 		if (USE_VIDEO) {
-			camera = new VideoCapture(0);
+			camera = new VideoCapture(1);
+			//camera = new VideoCapture("GymCartApprch.wmv");
 	    	if(!camera.isOpened()){
 				System.out.println("The camera didn't open.");
 				throw new Exception("Can't open the camera.");
@@ -164,30 +176,28 @@ public class HelloOCV {
 	    	
 	    	
 	    	camSetting = camera.get(Videoio.CAP_PROP_BRIGHTNESS);	
-	    	camera.set(Videoio.CAP_PROP_BRIGHTNESS, 18);	// 66, 142, 32, 73 // 66  //10 - CV_CAP_PROP_BRIGHTNESS Brightness of the image (only for cameras).
+	    	camera.set(Videoio.CAP_PROP_BRIGHTNESS, INITIAL_WC_BRIGHTNESS);	// 18, 66, 142, 32, 73 // 66  //10 - CV_CAP_PROP_BRIGHTNESS Brightness of the image (only for cameras).
 	    	
 	    	camSetting = camera.get(Videoio.CAP_PROP_CONTRAST);	
-	    	camera.set(Videoio.CAP_PROP_CONTRAST, 90);		// 32, 66, 128, 42, 32  //11 - CV_CAP_PROP_CONTRAST Contrast of the image (only for cameras).
-	    	//camera.set(Videoio.CAP_PROP_CONTRAST, 128);		// 32, 66, 128, 42, 32  //11 - CV_CAP_PROP_CONTRAST Contrast of the image (only for cameras).
+	    	camera.set(Videoio.CAP_PROP_CONTRAST, INITIAL_WC_CONTRAST);		// 90, 128, 32, 66, 128, 42, 32  //11 - CV_CAP_PROP_CONTRAST Contrast of the image (only for cameras).
 	    	
 	    	camSetting = camera.get(Videoio.CAP_PROP_EXPOSURE);	
-	    	camera.set(Videoio.CAP_PROP_EXPOSURE, -3); 	// -1, -2 -3 -2, -1  // 15 - CV_CAP_PROP_EXPOSURE Exposure (only for cameras).
+	    	camera.set(Videoio.CAP_PROP_EXPOSURE, INITIAL_WC_EXPOSURE); 	// -3, -1, -2 -3 -2, -1  // 15 - CV_CAP_PROP_EXPOSURE Exposure (only for cameras).
 	    	
 	    	camSetting = camera.get(Videoio.CAP_PROP_GAIN);	
-	    	camera.set(Videoio.CAP_PROP_GAIN, 16);			// 44, 9, 40, 9, 44  // 14 - CV_CAP_PROP_GAIN Gain of the image (only for cameras).
-	    	//camera.set(Videoio.CAP_PROP_GAIN, 8);			// 44, 9, 40, 9, 44  // 14 - CV_CAP_PROP_GAIN Gain of the image (only for cameras).
+	    	camera.set(Videoio.CAP_PROP_GAIN, INITIAL_WC_GAIN);			// 16, 8, 44, 9, 40, 9, 44  // 14 - CV_CAP_PROP_GAIN Gain of the image (only for cameras).
 	    	
 	    	camSetting = camera.get(Videoio.CAP_PROP_SATURATION);	
-	    	camera.set(Videoio.CAP_PROP_SATURATION, 255);			// 255, 209, 186, 35, 255 // 12 - CV_CAP_PROP_SATURATION Saturation of the image (only for cameras).
+	    	camera.set(Videoio.CAP_PROP_SATURATION, INITIAL_WC_SATURATION);			// 255, 209, 186, 35, 255 // 12 - CV_CAP_PROP_SATURATION Saturation of the image (only for cameras).
 	    	
 	    	camSetting = camera.get(Videoio.CAP_PROP_WHITE_BALANCE_BLUE_U);	
-	    	camera.set(Videoio.CAP_PROP_WHITE_BALANCE_BLUE_U, 6500);		//6500, 2800, 6500
+	    	camera.set(Videoio.CAP_PROP_WHITE_BALANCE_BLUE_U, INITIAL_WC_WHTBALBLU);		//6500, 2800, 6500
 	    	
 	    	camSetting = camera.get(Videoio.CAP_PROP_WHITE_BALANCE_RED_V);	
-	    	camera.set(Videoio.CAP_PROP_WHITE_BALANCE_RED_V, -1);		//6500, -1, 6500
+	    	camera.set(Videoio.CAP_PROP_WHITE_BALANCE_RED_V, INITIAL_WC_WHTBALRED);		//-1, 6500, -1, 6500
 	    	
 	    	camSetting = camera.get(Videoio.CAP_PROP_HUE);	
-	    	camera.set(Videoio.CAP_PROP_HUE, 3.6305E7);	// 4.04987E7, 4.3513e7, 3.84e7, //13 - CV_CAP_PROP_HUE Hue of the image (only for cameras).
+	    	camera.set(Videoio.CAP_PROP_HUE, 4.3316184E7);	// 3.6305E7, 4.04987E7, 4.3513e7, 3.84e7, //13 - CV_CAP_PROP_HUE Hue of the image (only for cameras).
 	    	
 		}
 		
@@ -238,10 +248,10 @@ public class HelloOCV {
 			executionCount ++;
 			//System.currentTimeMillis()
 			
-		//} while ((calibrPass < MAX_CALIBR_PASS) || (USE_VIDEO));
+		} while ((calibrPass < MAX_CALIBR_PASS) || (USE_VIDEO));
 		//} while (executionCount < 1);
 		//} while ((dist2Target == 0) || (Double.toString(dist2Target).equals("NaN")));
-		} while ((dist2TargetTemp == 0) || (dist2TargetTemp.isNaN()));
+		//} while ((dist2TargetTemp == 0) || (dist2TargetTemp.isNaN()));
 		
 		if (USE_VIDEO)
 			camera.release();
@@ -467,6 +477,7 @@ public class HelloOCV {
 		bottomIntercept = 0;
 		yAtXFitBL = 0;
 		yAtXFitBR = 0;
+		percHLFPts = 0;
 	}
 	
 	private static void printLineFit() throws IOException {
@@ -503,7 +514,8 @@ public class HelloOCV {
 		//jpgFile = new String("LTGym8ft.jpg");
 		//jpgFile = new String("LTGym18ft.jpg"); 
 		//jpgFile = new String("BreakRoom0221.jpg");
-		jpgFile = new String("Image_for_PostAnalysis.jpg");
+		jpgFile = new String("TestImage1.jpg");
+		//jpgFile = new String("Image_for_PostAnalysis.jpg");
 
 		// By default, we clear this variable and only set it if applicable
 		lastTestInCalbrPh = false;
@@ -603,6 +615,7 @@ public class HelloOCV {
 				}
 			}
 		} else {
+			// Since we're not in calibration mode, simply set our values as specified initial sets
 			loHue = INITIAL_LO_HUE;
 			hiHue = INITIAL_HI_HUE;
 			loSat = INITIAL_LO_SATURATION;
@@ -643,14 +656,19 @@ public class HelloOCV {
 		imageQuality -= (stdErrT / 3);
 		imageQuality -= (stdErrB / 4);
 		
-		if (lTgtAccrW > 1) imageQuality -= (lTgtAccrW - 1);
-		if (rTgtAccrW > 1) imageQuality -= (rTgtAccrW - 1);
+		imageQuality -= 0.2 * (lTgtAccrW - 1) * (lTgtAccrW - 1);
+		imageQuality -= 0.2 * (rTgtAccrW - 1) * (rTgtAccrW - 1);
 		
 		if (dist2Target > 1) {
 			imageQuality += .1;
 		} else {
 			imageQuality = 0.1 * imageQuality;
 		}
+		
+		// Reduce the rating according to the number of points missing from the linefit data
+		imageQuality = imageQuality * percHLFPts;
+		
+		// Finally, ensure that we return a rating between 0 and 1
 		if (imageQuality < 0) {
 			imageQuality = 0;
 		}
@@ -674,7 +692,7 @@ public class HelloOCV {
 								
 				// Choose an efficient means to repetitively append an analysis file (create new here)
 				try(PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter("calibr_data.txt", false)))) {
-				    out.println("FileImage,loHue,hiHue,loSat,hiSat,loLum,hiLum,LineCount,VLnGrps,LnFitStErrB,LnFitStErrT,LTAccur,RTAccur,Dist,AngleT,AngleR,Score");
+				    out.println("FileImage,loHue,hiHue,loSat,hiSat,loLum,hiLum,LineCount,VLnGrps,LnFitStErrB,LnFitStErrT,LTAccur,RTAccur,Dist,AngleT,AngleR,%LFPts,Score");
 				}catch (IOException e) {
 				    System.err.println(e);
 				}			
@@ -682,6 +700,7 @@ public class HelloOCV {
 				
 			} else if (calibrPhase >= 99) {
 
+				// Signal the end
 				calibrPass = MAX_CALIBR_PASS;
 				
 				// Choose an efficient means to repetitively append an analysis file (append here)
@@ -703,6 +722,7 @@ public class HelloOCV {
 					LineOut += "," + Double.toString(dist2Target);
 					LineOut += "," + Double.toString(angOfIncT);
 					LineOut += "," + Double.toString(angOfIncR);
+					LineOut += "," + Double.toString(percHLFPts);
 					LineOut += "," + Double.toString(calibrScore);
 					out.println(LineOut);
 				}catch (IOException e) {
@@ -711,6 +731,7 @@ public class HelloOCV {
 				
 			} else {
 
+				// Being in the middle of calibration, evaluate the most recent analysis
 				if (imageQuality > optimumQuality) {
 					optimumQuality = imageQuality;
 					optLoHue = loHue;
@@ -740,12 +761,13 @@ public class HelloOCV {
 					LineOut += "," + Integer.toString(ocvLineCount);
 					LineOut += "," + Integer.toString(vLineSet + 1);
 					LineOut += "," + Double.toString(stdErrB);
-					LineOut += "," + Double.toString(stdErrT);	//lTgtAccrW
+					LineOut += "," + Double.toString(stdErrT);
 					LineOut += "," + Double.toString(lTgtAccrW);
 					LineOut += "," + Double.toString(rTgtAccrW);
 					LineOut += "," + Double.toString(dist2Target);
 					LineOut += "," + Double.toString(angOfIncT);
 					LineOut += "," + Double.toString(angOfIncR);
+					LineOut += "," + Double.toString(percHLFPts);
 					LineOut += "," + Double.toString(calibrScore);
 					out.println(LineOut);
 				}catch (IOException e) {
@@ -756,28 +778,21 @@ public class HelloOCV {
 			}
 			
 			// As a last step in the calibration pass, determine when we go to the next calibration phase
-			if (calibrPass == 1) {
-				lastScore = imageQuality;
-			} else {
-				if (imageQuality < (0.5 * optimumQuality)) {
-					calibrPhase ++;
-					optimumQuality = 0;
+			if (imageQuality < (0.5 * optimumQuality)) {
+				// Since we reset to the optimum settings at each phase, don't bother letting this fall off too far
+				calibrPhase ++;
+				//optimumQuality = 0;
+				
+				// Restore the optimum values
+				loHue = optLoHue;
+				hiHue = optHiHue;
+				loSat = optLoSat;
+				hiSat = optHiSat;
+				loLum = optLoLum;
+				hiLum = optHiLum;
 					
-					// Restore the optimum values
-					loHue = optLoHue;
-					hiHue = optHiHue;
-					loSat = optLoSat;
-					hiSat = optHiSat;
-					loLum = optLoLum;
-					hiLum = optHiLum;
-					
-				} else {
-					lastScore = imageQuality;
-				}
-			}
-			
-			// If we've just finished testing the last value for the current phase, move to the next
-			if (lastTestInCalbrPh) {
+			} else if (lastTestInCalbrPh) {
+				// If we've just finished testing the last value for the current phase, move to the next
 				calibrPhase++;
 				
 				// Restore the optimum values
@@ -787,7 +802,6 @@ public class HelloOCV {
 				hiSat = optHiSat;
 				loLum = optLoLum;
 				hiLum = optHiLum;
-				
 			}
 			
 			if (calibrPass < 100) calibrPass ++;
@@ -877,6 +891,9 @@ public class HelloOCV {
 				sumy += yAtYfind[zLpCtr1];
 			}
 		}
+		
+		// While this isn't yet a percent, we start by totaling the points found
+		percHLFPts = ptCount;
 		
 		double xbar = sumx / ptCount;
 		double ybar = sumy / ptCount;
@@ -996,6 +1013,9 @@ public class HelloOCV {
 				sumy += yAtYfind[zLpCtr1];
 			}
 		}
+		
+		percHLFPts += ptCount;
+		percHLFPts = percHLFPts / 24;		// We're looking for a total of 24 points to linefit top and bottom
 		
 		xbar = sumx / ptCount;
 		ybar = sumy / ptCount;
@@ -1495,6 +1515,18 @@ public class HelloOCV {
 			tgt1RightXPtr = vertSel[1];
 			tgt2LeftXPtr = vertSel[2];
 			tgt2RightXPtr = vertSel[3];
+
+			// Now verify that we have acceptable spacing to presume these to be our targets
+			rectRatio = (nominalVerticalLineX[tgt2LeftXPtr] - nominalVerticalLineX[tgt1RightXPtr]);
+			rectRatio = rectRatio / (nominalVerticalLineX[tgt1RightXPtr] - nominalVerticalLineX[tgt1LeftXPtr]);
+			lTgtAccrW = rectRatio / refRatio;
+			if (TROUBLESHOOTING_MODE) System.out.println("The left target accuracy is 1 : " + Double.toString(lTgtAccrW));
+			
+			rectRatio = (nominalVerticalLineX[tgt2LeftXPtr] - nominalVerticalLineX[tgt1RightXPtr]);
+			rectRatio = rectRatio / (nominalVerticalLineX[tgt2RightXPtr] - nominalVerticalLineX[tgt2LeftXPtr]);
+			rTgtAccrW = rectRatio / refRatio;
+			if (TROUBLESHOOTING_MODE) System.out.println("The right target accuracy is 1 : " + Double.toString(rTgtAccrW));
+			
 		}
 		if (TROUBLESHOOTING_MODE) System.out.println();
 		
@@ -1919,6 +1951,16 @@ public class HelloOCV {
 					if (TROUBLESHOOTING_MODE) System.out.println("Its position is roughly " + Double.toString(nominalVerticalLineX[vLineSet]));
 					
 				}
+			} else if (x == (ocvLineCount - 1)) {
+				// This line doesn't contribute, but we need to record the results of the last line group
+				totalizedVerticalLen[vLineSet] = cumulLen;
+				
+				// Capture the nominal x coordinate
+				nominalVerticalLineX[vLineSet] = (lastAdjVerticalline + firstAdjVerticalline) / 2;
+				
+				if (TROUBLESHOOTING_MODE) System.out.println("The last line is of length " + Double.toString(totalizedVerticalLen[vLineSet]));
+				if (TROUBLESHOOTING_MODE) System.out.println("Its position is roughly " + Double.toString(nominalVerticalLineX[vLineSet]));
+				
 			}
 			// Note:  In this loop, nothing happens for lines that aren't vertical
 		}
