@@ -31,10 +31,17 @@ public class GripPipelineGym /*implements VisionPipeline*/ {
 	private Mat hslThresholdOutput = new Mat();
 	private ArrayList<Line> findLinesOutput = new ArrayList<Line>();
 	//private ArrayList<Line> filterLinesOutput = new ArrayList<Line>();
+	private Size getMatInfoSize = new Size();
+	private Boolean getMatInfoEmpty;
+	private Number getMatInfoChannels;
+	private Number getMatInfoCols;
+	private Number getMatInfoRows;
+	private Number getMatInfoHighValue;
+
+	// This would typically be set comparable to JPGS_TO_C
 	private static final boolean RUNNING_IMAGE_CAPTURE = true;
 
 	static {
-		
 		System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
 	}
 
@@ -43,6 +50,97 @@ public class GripPipelineGym /*implements VisionPipeline*/ {
 	 */
 	//@Override	
 	public void process(Mat source0, double loHue, double hiHue, double loSat, double hiSat, double loLum, double hiLum) {
+		
+		// Step Get_Mat_Info0:
+		Mat getMatInfoInput = source0;
+		Ref<Boolean> getMatInfoEmptyRef = new Ref<Boolean>();
+		Ref<Number> getMatInfoChannelsRef = new Ref<Number>();
+		Ref<Number> getMatInfoColsRef = new Ref<Number>();
+		Ref<Number> getMatInfoRowsRef = new Ref<Number>();
+		Ref<Number> getMatInfoHighValueRef = new Ref<Number>();
+		
+		getMatInfo(getMatInfoInput, getMatInfoSize, getMatInfoEmptyRef, getMatInfoChannelsRef, getMatInfoColsRef, getMatInfoRowsRef, getMatInfoHighValueRef);
+		
+		getMatInfoEmpty = getMatInfoEmptyRef.get();
+		getMatInfoChannels = getMatInfoChannelsRef.get();
+		getMatInfoCols = getMatInfoColsRef.get();
+		getMatInfoRows = getMatInfoRowsRef.get();
+		getMatInfoHighValue = getMatInfoHighValueRef.get();
+		
+		public Size getMatInfoSize() {
+			return getMatInfoSize;
+		}
+
+		public Boolean getMatInfoEmpty() {
+			return getMatInfoEmpty;
+		}
+
+		public Number getMatInfoChannels() {
+			return getMatInfoChannels;
+		}
+
+		public Number getMatInfoCols() {
+			return getMatInfoCols;
+		}
+
+		public Number getMatInfoRows() {
+			return getMatInfoRows;
+		}
+
+		public Number getMatInfoHighValue() {
+			return getMatInfoHighValue;
+		}
+
+		private void getMatInfo(Mat src, Size size, Ref<Boolean> empty, Ref<Number> channels, Ref<Number> cols, Ref<Number> rows, Ref<Number> highestValue) {
+		empty.set(Boolean.valueOf(src.empty()));
+		channels.set(Integer.valueOf(src.channels()));
+		cols.set(Integer.valueOf(src.cols()));
+		rows.set(Integer.valueOf(src.rows()));
+		highestValue.set(Integer.valueOf((int)(Core.minMaxLoc(src.reshape(1)).maxVal)));
+		Size matSize = src.size();
+		size.height = matSize.height;
+		size.width = matSize.width;
+		}
+
+		private static class Ref<T> {
+			private T value;
+			
+			/**
+			 * Constructor for a Ref object.
+			 * @param initValue Type T initial value for the object.
+			 */
+			public Ref(T initValue) {
+				value = initValue;
+			}
+
+			/**
+			 * Constructor for a Ref object without an initial value.
+			 * Equivalent to calling Ref(null)
+			 */
+			public Ref() {
+				this(null);
+			}
+
+			/**
+			 * Sets the object to contain a new value.
+			 *
+			 * @param newValue the new value being referenced
+			 */
+			public void set(T newValue) {
+				value = newValue;
+			}
+
+			/**
+			 * Gets the current referenced value
+			 *
+			 * @return the current referenced value
+			 */
+			public T get() {
+				return value;
+			}
+		}
+
+
 		// Step HSL_Threshold0:
 		Mat hslThresholdInput = source0;
 		
@@ -103,8 +201,7 @@ public class GripPipelineGym /*implements VisionPipeline*/ {
 	 * @param lum The min and max luminance
 	 * @param output The image in which to store the output.
 	 */
-	private void hslThreshold(Mat input, double[] hue, double[] sat, double[] lum,
-		Mat out) {
+	private void hslThreshold(Mat input, double[] hue, double[] sat, double[] lum, Mat out) {
 		Imgproc.cvtColor(input, out, Imgproc.COLOR_BGR2HLS);
 		Core.inRange(out, new Scalar(hue[0], lum[0], sat[0]),
 			new Scalar(hue[1], lum[1], sat[1]), out);

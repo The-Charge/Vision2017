@@ -27,10 +27,10 @@ import com.thecharge.GripPipelineGym.Line;
 import edu.wpi.first.wpilibj.networktables.NetworkTable;
 
 public class HelloOCV {
-	private static final boolean TROUBLESHOOTING_MODE = true;
-	private static final boolean CALIBRATION_MODE = true;
+	private static final boolean TROUBLESHOOTING_MODE = false;
+	private static final boolean CALIBRATION_MODE = false;
 	private static final int MAX_CALIBR_PASS = 999;
-	private static final boolean USE_VIDEO = false;
+	private static final boolean USE_VIDEO = true;
 	private static final boolean JPGS_TO_C = false;
 	private static boolean userStop = false;
 	private static final double INCH_GAP_BETW = 6.25; // Distance between reflective targets
@@ -63,12 +63,12 @@ public class HelloOCV {
 	private static double tanHlfAngleH = Math.tan(Math.toRadians(HALF_FIELD_ANGLE_H));
 	private static double tanHlfAngleV = Math.tan(Math.toRadians(HALF_FIELD_ANGLE_V));
 	private static double dist2Target = 0;	// Calculated distance to the target in inches
-	private static final double INITIAL_LO_HUE = 65;	//40,65,68,32, 73;		//74;
-	private static final double INITIAL_HI_HUE = 92;	//142,120,117, 103;	//96;	// 93.99317406143345;
-	private static final double INITIAL_LO_SATURATION = 3;	//156,211, 14;	//40;	//45.86330935251798;
+	private static final double INITIAL_LO_HUE = 88;	//40,65,68,32, 73;		//74;
+	private static final double INITIAL_HI_HUE = 94;	//142,120,117, 103;	//96;	// 93.99317406143345;
+	private static final double INITIAL_LO_SATURATION = 183;	//156,211, 14;	//40;	//45.86330935251798;
 	private static final double INITIAL_HI_SATURATION = 250;	//255, 255;	//140;	//153;	// 128.80546075085323;
-	private static final double INITIAL_LO_LUMIN = 46;	//89,99,66, 135;	//80.26079136690647;
-	private static final double INITIAL_HI_LUMIN = 180;	//133,255,166, 235;	//163.61774744027304;
+	private static final double INITIAL_LO_LUMIN = 26;	//89,99,66, 135;	//80.26079136690647;
+	private static final double INITIAL_HI_LUMIN = 132;	//133,255,166, 235;	//163.61774744027304;
 	//LTGym8ft => 81 / 114 / 7 / 140 / 85 / 254
 	//BreakRoom => 71 / 110 / 17 / 253 / 12 / 255
 	//LTGym6f70d.jpg => 83 / 102 / 57 / 255 / 71 / 185
@@ -232,13 +232,12 @@ public class HelloOCV {
 				*/
 				
 				
-			} 
-			else
-			{
+			} else {
 				selectNextParameterSet();
 				System.out.println("Reading next image");
 				camera.read(image);
 			}
+			
 			// Having selected a source, process the image (this is the dominant call)
 			processSingleImage(image);
 			
@@ -383,6 +382,19 @@ public class HelloOCV {
 				
 				// For the case where we want to analyze a series of tuning choices, record the results to a file
 				recordAnalysisResults();
+				
+				// There may be cases where we want to analyze an image taken from video
+				if (USE_VIDEO && (imageQuality < 0.2)) {
+					if (poorImageCount == 0) {
+						Imgcodecs.imwrite("Image_for_PostAnalysis.jpg", image);
+					}
+					poorImageCount++;
+
+				}
+				
+
+				
+				
 			}
 		} else {
 			dist2Target = 0;
@@ -503,19 +515,23 @@ public class HelloOCV {
 
 	private static void selectNextParameterSet() {
 		
-		//jpgFile = new String("Picture 6.jpg");
-		//jpgFile = new String("LTGym3ft.jpg");	
-		//jpgFile = new String("Kitchen58inLt.jpg");
-		//jpgFile = new String("KitchLtOn20in60d.jpg");
-		//jpgFile = new String("KitchLtOn46in45d.jpg");
-		//jpgFile = new String("OriginalVImage.jpg");
-		//jpgFile = new String("LTGym6f45d.jpg");
-		//jpgFile = new String("LTGym6f70d.jpg");
-		//jpgFile = new String("LTGym8ft.jpg");
-		//jpgFile = new String("LTGym18ft.jpg"); 
-		//jpgFile = new String("BreakRoom0221.jpg");
-		jpgFile = new String("TestImage1.jpg");
-		//jpgFile = new String("Image_for_PostAnalysis.jpg");
+		if (USE_VIDEO) {
+			
+		} else {
+			//jpgFile = new String("Picture 6.jpg");
+			//jpgFile = new String("LTGym3ft.jpg");	
+			//jpgFile = new String("Kitchen58inLt.jpg");
+			//jpgFile = new String("KitchLtOn20in60d.jpg");
+			//jpgFile = new String("KitchLtOn46in45d.jpg");
+			//jpgFile = new String("OriginalVImage.jpg");
+			//jpgFile = new String("LTGym6f45d.jpg");
+			//jpgFile = new String("LTGym6f70d.jpg");
+			//jpgFile = new String("LTGym8ft.jpg");
+			//jpgFile = new String("LTGym18ft.jpg"); 
+			//jpgFile = new String("BreakRoom0221.jpg");
+			jpgFile = new String("TestImage1.jpg");
+			//jpgFile = new String("Image_for_PostAnalysis.jpg");
+		}
 
 		// By default, we clear this variable and only set it if applicable
 		lastTestInCalbrPh = false;
@@ -635,7 +651,7 @@ public class HelloOCV {
 		
 		if (ocvLineCount > 8) {
 			if (ocvLineCount < 50) {
-				imageQuality += 0.3;
+				imageQuality += 0.4;
 			} else {
 				imageQuality += 0.1;
 			}
@@ -677,7 +693,9 @@ public class HelloOCV {
 			imageQuality = 1;
 		}
 		
-		if (TROUBLESHOOTING_MODE) System.out.println("The analysis confidence value was " + Double.toString(imageQuality));
+		//if (TROUBLESHOOTING_MODE) System.out.println("The analysis confidence value was " + Double.toString(imageQuality));
+		System.out.println("The analysis confidence value was " + Double.toString(imageQuality));
+		System.out.println(" ");
 
 		
 		if (CALIBRATION_MODE) {
