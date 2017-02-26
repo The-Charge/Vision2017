@@ -63,23 +63,24 @@ public class HelloOCV {
 	private static double tanHlfAngleH = Math.tan(Math.toRadians(HALF_FIELD_ANGLE_H));
 	private static double tanHlfAngleV = Math.tan(Math.toRadians(HALF_FIELD_ANGLE_V));
 	private static double dist2Target = 0;	// Calculated distance to the target in inches
-	private static final double INITIAL_LO_HUE = 88;	//40,65,68,32, 73;		//74;
-	private static final double INITIAL_HI_HUE = 94;	//142,120,117, 103;	//96;	// 93.99317406143345;
-	private static final double INITIAL_LO_SATURATION = 183;	//156,211, 14;	//40;	//45.86330935251798;
-	private static final double INITIAL_HI_SATURATION = 250;	//255, 255;	//140;	//153;	// 128.80546075085323;
-	private static final double INITIAL_LO_LUMIN = 26;	//89,99,66, 135;	//80.26079136690647;
-	private static final double INITIAL_HI_LUMIN = 132;	//133,255,166, 235;	//163.61774744027304;
+	private static final double INITIAL_LO_HUE = 84;	//88;	//40,65,68,32, 73;		//74;
+	private static final double INITIAL_HI_HUE = 96;	//94;	//142,120,117, 103;	//96;	// 93.99317406143345;
+	private static final double INITIAL_LO_SATURATION = 101;	//183;	//156,211, 14;	//40;	//45.86330935251798;
+	private static final double INITIAL_HI_SATURATION = 255;	//250;	//255, 255;	//140;	//153;	// 128.80546075085323;
+	private static final double INITIAL_LO_LUMIN = 73;	//26;	//89,99,66, 135;	//80.26079136690647;
+	private static final double INITIAL_HI_LUMIN = 161;	//132;	//133,255,166, 235;	//163.61774744027304;
 	//LTGym8ft => 81 / 114 / 7 / 140 / 85 / 254
 	//BreakRoom => 71 / 110 / 17 / 253 / 12 / 255
 	//LTGym6f70d.jpg => 83 / 102 / 57 / 255 / 71 / 185
 	//BreakRoom0221 =>  73 / 171 / 3 / 61 / 96 / 181
-	private static final double INITIAL_WC_BRIGHTNESS = 128;
-	private static final double INITIAL_WC_CONTRAST = 32;
+	private static final double INITIAL_WC_BRIGHTNESS = 0;	//128;
+	private static final double INITIAL_WC_CONTRAST = 38;	//32;
 	private static final double INITIAL_WC_EXPOSURE = -2;
-	private static final double INITIAL_WC_GAIN = 0;
-	private static final double INITIAL_WC_SATURATION = 32;
-	private static final double INITIAL_WC_WHTBALBLU = 2800;
+	private static final double INITIAL_WC_GAIN = 1;	//0;
+	private static final double INITIAL_WC_SATURATION = 99;	//32;
+	private static final double INITIAL_WC_WHTBALBLU = 6023;	//2800;
 	private static final double INITIAL_WC_WHTBALRED = -1;
+	private static final double INITIAL_WC_HUE = 3.7E7;
 	private static boolean lastTestInCalbrPh = false;
 	private static double loHue = 0;	// 81 from optimization;
 	private static double hiHue = 0;	// 93.99317406143345;
@@ -147,7 +148,7 @@ public class HelloOCV {
 	private static long executionCount = 0;
 	private static int poorImageCount = 0;
 	private static Mat hslTO;
-
+	private static Number hiPixelValue = 0;
 	
 	public static void main(String[] args) throws Exception {
 		Double dist2TargetTemp = 0.0;
@@ -158,7 +159,7 @@ public class HelloOCV {
 		VideoCapture camera = null;
 		
 		if (USE_VIDEO) {
-			camera = new VideoCapture(1);
+			camera = new VideoCapture(0);
 			//camera = new VideoCapture("GymCartApprch.wmv");
 	    	if(!camera.isOpened()){
 				System.out.println("The camera didn't open.");
@@ -197,7 +198,7 @@ public class HelloOCV {
 	    	camera.set(Videoio.CAP_PROP_WHITE_BALANCE_RED_V, INITIAL_WC_WHTBALRED);		//-1, 6500, -1, 6500
 	    	
 	    	camSetting = camera.get(Videoio.CAP_PROP_HUE);	
-	    	camera.set(Videoio.CAP_PROP_HUE, 4.3316184E7);	// 3.6305E7, 4.04987E7, 4.3513e7, 3.84e7, //13 - CV_CAP_PROP_HUE Hue of the image (only for cameras).
+	    	camera.set(Videoio.CAP_PROP_HUE, INITIAL_WC_HUE);	// 3.6305E7, 4.04987E7, 4.3513e7, 3.84e7, //13 - CV_CAP_PROP_HUE Hue of the image (only for cameras).
 	    	
 		}
 		
@@ -264,7 +265,7 @@ public class HelloOCV {
 		// (replicate the class here)
 		GripPipelineGym gp = new GripPipelineGym();
 		gp.process(image, loHue, hiHue, loSat, hiSat, loLum, hiLum);
-
+		hiPixelValue = gp.getMatInfoHighValue();
 
 		// Create a List (special Java Collection) of "line" type entries from
 		// the specified image processing class
@@ -490,6 +491,7 @@ public class HelloOCV {
 		yAtXFitBL = 0;
 		yAtXFitBR = 0;
 		percHLFPts = 0;
+		hiPixelValue = 0;
 	}
 	
 	private static void printLineFit() throws IOException {

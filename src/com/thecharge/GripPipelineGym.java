@@ -9,7 +9,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.HashMap;
 
-//import edu.wpi.first.wpilibj.vision.VisionPipeline;
+import edu.wpi.first.wpilibj.vision.VisionPipeline;
 
 import org.opencv.core.*;
 import org.opencv.core.Core.*;
@@ -28,10 +28,10 @@ import org.opencv.objdetect.*;
 public class GripPipelineGym /*implements VisionPipeline*/ {
 
 	//Outputs
+	private Size getMatInfoSize = new Size();
 	private Mat hslThresholdOutput = new Mat();
 	private ArrayList<Line> findLinesOutput = new ArrayList<Line>();
 	//private ArrayList<Line> filterLinesOutput = new ArrayList<Line>();
-	private Size getMatInfoSize = new Size();
 	private Boolean getMatInfoEmpty;
 	private Number getMatInfoChannels;
 	private Number getMatInfoCols;
@@ -53,92 +53,21 @@ public class GripPipelineGym /*implements VisionPipeline*/ {
 		
 		// Step Get_Mat_Info0:
 		Mat getMatInfoInput = source0;
-		private Boolean getMatInfoEmptyRef = new Boolean(getMatInfoEmptyRef);
+		Ref<Boolean> getMatInfoEmptyRef = new Ref<Boolean>();
 		Ref<Number> getMatInfoChannelsRef = new Ref<Number>();
 		Ref<Number> getMatInfoColsRef = new Ref<Number>();
 		Ref<Number> getMatInfoRowsRef = new Ref<Number>();
 		Ref<Number> getMatInfoHighValueRef = new Ref<Number>();
 		
 		getMatInfo(getMatInfoInput, getMatInfoSize, getMatInfoEmptyRef, getMatInfoChannelsRef, getMatInfoColsRef, getMatInfoRowsRef, getMatInfoHighValueRef);
-		getMatInfo()
+		
 		getMatInfoEmpty = getMatInfoEmptyRef.get();
 		getMatInfoChannels = getMatInfoChannelsRef.get();
 		getMatInfoCols = getMatInfoColsRef.get();
 		getMatInfoRows = getMatInfoRowsRef.get();
 		getMatInfoHighValue = getMatInfoHighValueRef.get();
 		
-		public Size getMatInfoSize() {
-			return getMatInfoSize;
-		}
-
-		public Boolean getMatInfoEmpty() {
-			return getMatInfoEmpty;
-		}
-
-		public Number getMatInfoChannels() {
-			return getMatInfoChannels;
-		}
-
-		public Number getMatInfoCols() {
-			return getMatInfoCols;
-		}
-
-		public Number getMatInfoRows() {
-			return getMatInfoRows;
-		}
-
-		public Number getMatInfoHighValue() {
-			return getMatInfoHighValue;
-		}
-
-		private void getMatInfo(Mat src, Size size, Ref<Boolean> empty, Ref<Number> channels, Ref<Number> cols, Ref<Number> rows, Ref<Number> highestValue) {
-		empty.set(Boolean.valueOf(src.empty()));
-		channels.set(Integer.valueOf(src.channels()));
-		cols.set(Integer.valueOf(src.cols()));
-		rows.set(Integer.valueOf(src.rows()));
-		highestValue.set(Integer.valueOf((int)(Core.minMaxLoc(src.reshape(1)).maxVal)));
-		Size matSize = src.size();
-		size.height = matSize.height;
-		size.width = matSize.width;
-		}
-
-		private static class Ref<T> {
-			private T value;
-			
-			/**
-			 * Constructor for a Ref object.
-			 * @param initValue Type T initial value for the object.
-			 */
-			public Ref(T initValue) {
-				value = initValue;
-			}
-
-			/**
-			 * Constructor for a Ref object without an initial value.
-			 * Equivalent to calling Ref(null)
-			 */
-			public Ref() {
-				this(null);
-			}
-
-			/**
-			 * Sets the object to contain a new value.
-			 *
-			 * @param newValue the new value being referenced
-			 */
-			public void set(T newValue) {
-				value = newValue;
-			}
-
-			/**
-			 * Gets the current referenced value
-			 *
-			 * @return the current referenced value
-			 */
-			public T get() {
-				return value;
-			}
-		}
+	
 
 
 		// Step HSL_Threshold0:
@@ -246,6 +175,79 @@ public class GripPipelineGym /*implements VisionPipeline*/ {
 				lineList.add(new Line(lines.get(i, 0)[0], lines.get(i, 0)[1],
 					lines.get(i, 0)[2], lines.get(i, 0)[3]));
 			}
+		}
+	}
+	
+	public Size getMatInfoSize() {
+		return getMatInfoSize;
+	}
+
+	public Boolean getMatInfoEmpty() {
+		return getMatInfoEmpty;
+	}
+
+	public Number getMatInfoChannels() {
+		return getMatInfoChannels;
+	}
+
+	public Number getMatInfoCols() {
+		return getMatInfoCols;
+	}
+
+	public Number getMatInfoRows() {
+		return getMatInfoRows;
+	}
+
+	public Number getMatInfoHighValue() {
+		return getMatInfoHighValue;
+	}
+
+	private void getMatInfo(Mat src, Size size, Ref<Boolean> empty, Ref<Number> channels, Ref<Number> cols, Ref<Number> rows, Ref<Number> highestValue) {
+	empty.set(Boolean.valueOf(src.empty()));
+	channels.set(Integer.valueOf(src.channels()));
+	cols.set(Integer.valueOf(src.cols()));
+	rows.set(Integer.valueOf(src.rows()));
+	highestValue.set(Integer.valueOf((int)(Core.minMaxLoc(src.reshape(1)).maxVal)));
+	Size matSize = src.size();
+	size.height = matSize.height;
+	size.width = matSize.width;
+	}
+
+	private static class Ref<T> {
+		private T value;
+		
+		/**
+		 * Constructor for a Ref object.
+		 * @param initValue Type T initial value for the object.
+		 */
+		public Ref(T initValue) {
+			value = initValue;
+		}
+
+		/**
+		 * Constructor for a Ref object without an initial value.
+		 * Equivalent to calling Ref(null)
+		 */
+		public Ref() {
+			this(null);
+		}
+
+		/**
+		 * Sets the object to contain a new value.
+		 *
+		 * @param newValue the new value being referenced
+		 */
+		public void set(T newValue) {
+			value = newValue;
+		}
+
+		/**
+		 * Gets the current referenced value
+		 *
+		 * @return the current referenced value
+		 */
+		public T get() {
+			return value;
 		}
 	}
 
