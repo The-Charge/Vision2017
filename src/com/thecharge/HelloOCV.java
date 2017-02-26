@@ -203,10 +203,10 @@ public class HelloOCV {
 		}
 		
 		//Network Table Setup
-		//NetworkTable.setClientMode();
+		NetworkTable.setClientMode();
 		//NetworkTable.setIPAddress("127.0.0.1");
-		//NetworkTable.setIPAddress("10.26.19.2");
-		//NetworkTable table2Rbt = NetworkTable.getTable("Vision");
+		NetworkTable.setIPAddress("10.26.19.2");
+		NetworkTable table2Rbt = NetworkTable.getTable("Vision");
 		
 		if (CALIBRATION_MODE) {
 			calibrPass = 0;
@@ -241,6 +241,13 @@ public class HelloOCV {
 			
 			// Having selected a source, process the image (this is the dominant call)
 			processSingleImage(image);
+			
+			// Having concluded analysis, update the Network Tables
+			table2Rbt.putNumber("Distance", dist2Target/12);
+			table2Rbt.putNumber("RobotAngle", angleTrajectory);		// This now depicts the recommended angle from current course.
+			table2Rbt.putNumber("TargetAngle", angOfIncT);
+			table2Rbt.putNumber("Quality", imageQuality);
+			table2Rbt.putNumber("ImageCount", executionCount);
 			
 			// Moving to continuous mode (or even calibration, some variables will need to be reset
 			dist2TargetTemp = dist2Target;
