@@ -53,14 +53,14 @@ public class GripPipelineGym /*implements VisionPipeline*/ {
 		
 		// Step Get_Mat_Info0:
 		Mat getMatInfoInput = source0;
-		Ref<Boolean> getMatInfoEmptyRef = new Ref<Boolean>();
+		private Boolean getMatInfoEmptyRef = new Boolean(getMatInfoEmptyRef);
 		Ref<Number> getMatInfoChannelsRef = new Ref<Number>();
 		Ref<Number> getMatInfoColsRef = new Ref<Number>();
 		Ref<Number> getMatInfoRowsRef = new Ref<Number>();
 		Ref<Number> getMatInfoHighValueRef = new Ref<Number>();
 		
 		getMatInfo(getMatInfoInput, getMatInfoSize, getMatInfoEmptyRef, getMatInfoChannelsRef, getMatInfoColsRef, getMatInfoRowsRef, getMatInfoHighValueRef);
-		
+		getMatInfo()
 		getMatInfoEmpty = getMatInfoEmptyRef.get();
 		getMatInfoChannels = getMatInfoChannelsRef.get();
 		getMatInfoCols = getMatInfoColsRef.get();
