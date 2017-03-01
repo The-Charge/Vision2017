@@ -82,6 +82,7 @@ public class HelloOCV {
 	private static final double INITIAL_WC_WHTBALRED = -1;	//-1;
 	private static final double INITIAL_WC_HUE = 4.78E7;	//1.54E7;	//3.7E7;
 	private static boolean lastTestInCalbrPh = false;
+	private static boolean videoImageToJpg = false;
 	private static double loHue = 0;	// 81 from optimization;
 	private static double hiHue = 0;	// 93.99317406143345;
 	private static double loSat = 0;	// 45.86330935251798;
@@ -203,10 +204,10 @@ public class HelloOCV {
 		}
 		
 		//Network Table Setup
-		NetworkTable.setClientMode();
-		NetworkTable.setIPAddress("127.0.0.1");
-		NetworkTable.setIPAddress("10.26.19.2");
-		NetworkTable table2Rbt = NetworkTable.getTable("Vision");
+		//NetworkTable.setClientMode();
+		//NetworkTable.setIPAddress("127.0.0.1");
+		//NetworkTable.setIPAddress("10.26.19.2");
+		//NetworkTable table2Rbt = NetworkTable.getTable("Vision");
 		
 		if (CALIBRATION_MODE) {
 			calibrPass = 0;
@@ -232,10 +233,13 @@ public class HelloOCV {
 				cap.read(image);
 				*/
 				
-				
+			} else if (videoImageToJpg == true) {
+				selectNextParameterSet();
+				image = Imgcodecs.imread("KitchReCal2LtOff.jpg");		
+				videoImageToJpg = false;
 			} else {
 				selectNextParameterSet();
-				System.out.println("Reading next image");
+				//System.out.println("Reading next image");
 				camera.read(image);
 			}
 			
@@ -243,11 +247,11 @@ public class HelloOCV {
 			processSingleImage(image);
 			
 			// Having concluded analysis, update the Network Tables
-			table2Rbt.putNumber("Distance", dist2Target/12);
-			table2Rbt.putNumber("RobotAngle", angleTrajectory);		// This now depicts the recommended angle from current course.
-			table2Rbt.putNumber("TargetAngle", angOfIncT);
-			table2Rbt.putNumber("Quality", imageQuality);
-			table2Rbt.putNumber("ImageCount", executionCount);
+			//table2Rbt.putNumber("Distance", dist2Target/12);
+			//table2Rbt.putNumber("RobotAngle", angleTrajectory);		// This now depicts the recommended angle from current course.
+			//table2Rbt.putNumber("TargetAngle", angOfIncT);
+			//table2Rbt.putNumber("Quality", imageQuality);
+			//table2Rbt.putNumber("ImageCount", executionCount);
 			
 			// Moving to continuous mode (or even calibration, some variables will need to be reset
 			dist2TargetTemp = dist2Target;
@@ -272,7 +276,7 @@ public class HelloOCV {
 		// (replicate the class here)
 		GripPipelineGym gp = new GripPipelineGym();
 		gp.process(image, loHue, hiHue, loSat, hiSat, loLum, hiLum);
-		hiPixelValue = gp.getMatInfoHighValue();
+		//hiPixelValue = gp.getMatInfoHighValue();
 
 		// Create a List (special Java Collection) of "line" type entries from
 		// the specified image processing class
@@ -399,19 +403,16 @@ public class HelloOCV {
 					poorImageCount++;
 
 				}
-				
-
-				
-				
 			}
 		} else {
+			videoImageToJpg = true;
 			dist2Target = 0;
 			angOfIncT = 0;
 			angOfIncR = 0;
 			angleTrajectory = 0;
 			imageQuality = 0;
-			//System.out.println("Less than 3 lines were found in the image :" + Double.toString(ocvLineCount));
 			System.out.println("Less than 3 lines were found in the image: " + ocvLineCount);
+			//Thread.sleep(100);
 		}
 	}
 
@@ -536,10 +537,10 @@ public class HelloOCV {
 			//jpgFile = new String("KitchLtOn20in60d.jpg");
 			//jpgFile = new String("KitchLtOn46in45d.jpg");
 			//jpgFile = new String("OriginalVImage.jpg");
-			jpgFile = new String("LTGym6f45d.jpg");
+			//jpgFile = new String("LTGym6f45d.jpg");
 			//jpgFile = new String("LTGym6f70d.jpg");
 			//jpgFile = new String("LTGym8ft.jpg");
-			//jpgFile = new String("LTGym18ft.jpg"); 
+			jpgFile = new String("LTGym18ft.jpg"); 
 			//jpgFile = new String("BreakRoom0221.jpg");
 			//jpgFile = new String("TestImage1.jpg");
 			//jpgFile = new String("Image_for_PostAnalysis.jpg");
