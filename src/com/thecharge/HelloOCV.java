@@ -73,7 +73,7 @@ public class HelloOCV {
 	//BreakRoom => 71 / 110 / 17 / 253 / 12 / 255
 	//LTGym6f70d.jpg => 83 / 102 / 57 / 255 / 71 / 185
 	//BreakRoom0221 =>  73 / 171 / 3 / 61 / 96 / 181
-	private static final double INITIAL_WC_BRIGHTNESS = 34;	//48;	//0;	//128;
+	private static final double INITIAL_WC_BRIGHTNESS = 25; //34 worked well initially;	//48;	//0;	//128;
 	private static final double INITIAL_WC_CONTRAST = 39;	//69;	//38;	//32;
 	private static final double INITIAL_WC_EXPOSURE = -2;	//-2;
 	private static final double INITIAL_WC_GAIN = 0;	//1;	//0;
@@ -147,6 +147,7 @@ public class HelloOCV {
 	private static double percHLFPts = 0;		// Percent of the horizontal line fit points that were found
 	private static long executionCount = 0;
 	private static int poorImageCount = 0;
+	private static boolean revertToJPG = false;
 	private static Mat hslTO;
 	private static Number hiPixelValue = 0;
 	
@@ -231,8 +232,10 @@ public class HelloOCV {
 				cap.open("GymCartApprch.wmv");
 				cap.read(image);
 				*/
-				
-				
+			} else if (revertToJPG) {
+				selectNextParameterSet();
+				image = Imgcodecs.imread("DummyImage.jpg");
+				revertToJPG = false;
 			} else {
 				selectNextParameterSet();
 				System.out.println("Reading next image");
@@ -412,6 +415,7 @@ public class HelloOCV {
 			imageQuality = 0;
 			//System.out.println("Less than 3 lines were found in the image :" + Double.toString(ocvLineCount));
 			System.out.println("Less than 3 lines were found in the image: " + ocvLineCount);
+			revertToJPG = true;
 		}
 	}
 
