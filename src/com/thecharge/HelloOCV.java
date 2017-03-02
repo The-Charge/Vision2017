@@ -235,7 +235,7 @@ public class HelloOCV {
 				
 			} else if (videoImageToJpg == true) {
 				selectNextParameterSet();
-				image = Imgcodecs.imread("KitchReCal2LtOff.jpg");		
+				image = Imgcodecs.imread("DummyImage.jpg");		
 				videoImageToJpg = false;
 			} else {
 				selectNextParameterSet();
