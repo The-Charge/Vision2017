@@ -27,10 +27,10 @@ import com.thecharge.GripPipelineGym.Line;
 import edu.wpi.first.wpilibj.networktables.NetworkTable;
 
 public class HelloOCV {
-	private static final boolean TROUBLESHOOTING_MODE = true;
-	private static final boolean USE_VIDEO = false;
-	private static final boolean JPGS_TO_C = true;
-	private static final boolean WRITE_NETW_TBLS = false;
+	private static final boolean TROUBLESHOOTING_MODE = false;
+	private static final boolean USE_VIDEO = true;
+	private static final boolean JPGS_TO_C = false;
+	private static final boolean WRITE_NETW_TBLS = true;
 	private static final boolean CALIBRATION_MODE = false;
 	private static final int MAX_CALIBR_PASS = 999;
 	private static boolean userStop = false;
@@ -122,6 +122,7 @@ public class HelloOCV {
 	private static double bottomIntercept = 0;
 	private static double yAtXFitBL = 0;
 	private static double yAtXFitBR = 0;
+	private static double bestWt = 0;
 	private static double optLoHue = 0;		// These are the determined optimal values during calibration
 	private static double optHiHue = 0;
 	private static double optLoSat = 0;
@@ -210,7 +211,6 @@ public class HelloOCV {
 	    	
 		}
 		
-		/*
 		//Network Table Setup
 		NetworkTable.setClientMode();
 		if (WRITE_NETW_TBLS) {
@@ -219,7 +219,6 @@ public class HelloOCV {
 			NetworkTable.setIPAddress("127.0.0.1");
 		}
 		NetworkTable table2Rbt = NetworkTable.getTable("Vision");
-		*/
 		
 		if (CALIBRATION_MODE) {
 			calibrPass = 0;
@@ -245,6 +244,7 @@ public class HelloOCV {
 				cap.open("GymCartApprch.wmv");
 				cap.read(image);
 				*/
+				
 			} else if (revertToJPG) {
 				// Save off the image that brought on this condition
 				if (TROUBLESHOOTING_MODE && (webcamSettings == 0)) {
@@ -270,7 +270,6 @@ public class HelloOCV {
 			// Having selected a source, process the image (this is the dominant call)
 			processSingleImage(image);
 			
-			/*
 			if (WRITE_NETW_TBLS) {
 				// Having concluded analysis, update the Network Tables
 				table2Rbt.putNumber("Distance", dist2Target/12);
@@ -279,7 +278,6 @@ public class HelloOCV {
 				table2Rbt.putNumber("Quality", imageQuality);
 				table2Rbt.putNumber("ImageCount", executionCount);
 			}
-			*/
 			
 			// Moving to continuous mode (or even calibration, some variables will need to be reset
 			dist2TargetTemp = dist2Target;
@@ -304,7 +302,7 @@ public class HelloOCV {
 		// (replicate the class here)
 		GripPipelineGym gp = new GripPipelineGym();
 		gp.process(image, loHue, hiHue, loSat, hiSat, loLum, hiLum);
-		hiPixelValue = gp.getMatInfoHighValue();
+		//hiPixelValue = gp.getMatInfoHighValue();
 
 		// Create a List (special Java Collection) of "line" type entries from
 		// the specified image processing class
@@ -398,30 +396,36 @@ public class HelloOCV {
 				// While we hope for four vertical lines, choose the best four if there are more
 				findFourBestVLines(totalizedVerticalLen, nominalVerticalLineX);
 				
-				// Find the horizontal lines of the targets
-				double[] xMinHorizontalLine = new double[ocvLineCount]; // Minimum y coordinate of the particular vertical line
-				double[] xMaxHorizontalLine = new double[ocvLineCount]; // Maximum y coordinate of the particular vertical line
-				double[] xMinHorizontalLineSet = new double[ocvLineCount]; // Minimum y coordinate of the particular vertical line set
-				double[] xMaxHorizontalLineSet = new double[ocvLineCount]; // Maximum y coordinate of the particular vertical line set
+				if (bestWt > 0) {
+					// Find the horizontal lines of the targets
+					double[] xMinHorizontalLine = new double[ocvLineCount]; // Minimum y coordinate of the particular vertical line
+					double[] xMaxHorizontalLine = new double[ocvLineCount]; // Maximum y coordinate of the particular vertical line
+					double[] xMinHorizontalLineSet = new double[ocvLineCount]; // Minimum y coordinate of the particular vertical line set
+					double[] xMaxHorizontalLineSet = new double[ocvLineCount]; // Maximum y coordinate of the particular vertical line set
+					
+					// Having chosen our four best lines, determine where we'll look for our horizontal boundaries of the targets
+					findHorizontalLines(edgeID, targetLines, nominalVerticalLineX, yMinVerticalLineSet, yMaxVerticalLineSet, xMinHorizontalLine, xMaxHorizontalLine, xMinHorizontalLineSet, xMaxHorizontalLineSet);
+					
+					// While actually derived some time ago, write to file the HSL output
+					generateGripImage(gp);
+					
+					// Using x,y pairs from predefined positions within the line segments, perform a line fit for target top and bottom 
+					findLineFit(image, edgeID, targetLines);
+					
+					// Generate the files ocvLineOutput.txt and RsltLineOutput.txt
+					saveLineData(xAvgDiff, edgeID, targetLines, totalizedVerticalLen, nominalVerticalLineX, yMinVerticalLineSet, yMaxVerticalLineSet, xMinHorizontalLineSet, xMaxHorizontalLineSet);
+					
+					// Generate the file XYLineFit.txt
+					printLineFit();
+					
+					// Calculate the angle of incidence for the Robot as well as the estimated distance from the robot
+					calcAngOfIncR();
+					
+					// Calculate the angle of incidence of the target and recommend a new direction for the robot to take
+					calcTargetDistance();
+				}
 				
-				// Having chosen our four best lines, determine where we'll look for our horizontal boundaries of the targets
-				findHorizontalLines(edgeID, targetLines, nominalVerticalLineX, yMinVerticalLineSet, yMaxVerticalLineSet, xMinHorizontalLine, xMaxHorizontalLine, xMinHorizontalLineSet, xMaxHorizontalLineSet);
-				
-				// While actually derived some time ago, write to file the HSL output
-				generateGripImage(gp);
-				
-				// Using x,y pairs from predefined positions within the line segments, perform a line fit for target top and bottom 
-				findLineFit(image, edgeID, targetLines);
-				
-				saveLineData(xAvgDiff, edgeID, targetLines, totalizedVerticalLen, nominalVerticalLineX, yMinVerticalLineSet, yMaxVerticalLineSet, xMinHorizontalLineSet, xMaxHorizontalLineSet);
-				
-				printLineFit();
-				
-				calcAngOfIncR();
-				
-				calcTargetDistance();
-				
-				// For the case where we want to analyze a series of tuning choices, record the results to a file
+				// For the case where we want to analyze a series of tuning choices, record the results to a file (Image Quality)
 				recordAnalysisResults();
 				
 				// There may be cases where we want to analyze an image taken from video
@@ -434,8 +438,6 @@ public class HelloOCV {
 				}
 				
 
-				
-				
 			}
 		} else {
 			dist2Target = 0;
@@ -1518,7 +1520,6 @@ public class HelloOCV {
 		double gap2 = 0;
 		double gap3 = 0;
 		double lineWt = 0;
-		double bestWt = 0;
 		Integer[] vertSel = new Integer[4]; 
 		for (int zLpCtr1 = 0; zLpCtr1 < 4; zLpCtr1++) {
 			vertSel[zLpCtr1] = 0;
@@ -1532,6 +1533,9 @@ public class HelloOCV {
 			tgt2LeftXPtr = 2;
 			tgt2RightXPtr = 3;
 			
+			// While the choice is arbitrary, choose a best weight
+			bestWt = (nominalVerticalLineX[tgt2LeftXPtr] - nominalVerticalLineX[tgt1RightXPtr]);
+			
 			// Now verify that we have acceptable spacing to presume these to be our targets
 			rectRatio = (nominalVerticalLineX[tgt2LeftXPtr] - nominalVerticalLineX[tgt1RightXPtr]);
 			rectRatio = rectRatio / (nominalVerticalLineX[tgt1RightXPtr] - nominalVerticalLineX[tgt1LeftXPtr]);
@@ -1544,7 +1548,7 @@ public class HelloOCV {
 			if (TROUBLESHOOTING_MODE) System.out.println("The right target accuracy is 1 : " + Double.toString(rTgtAccrW));
 			
 		} else if (vLineSet < 3) {
-			// We need to gracefully indicate that processing didn't go well
+			// We wouldn't expect to arrive here, but if we do we need to gracefully indicate that processing didn't go well
 		} else {
 			// Find the three sets of signals that yield the best 6.25 / 2 spacing ratio
 			for (int x = 0; x <= (vLineSet-3); x++) {

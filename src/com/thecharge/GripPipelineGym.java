@@ -28,15 +28,15 @@ import org.opencv.objdetect.*;
 public class GripPipelineGym /*implements VisionPipeline*/ {
 
 	//Outputs
-	private Size getMatInfoSize = new Size();
+	//private Size getMatInfoSize = new Size();
 	private Mat hslThresholdOutput = new Mat();
 	private ArrayList<Line> findLinesOutput = new ArrayList<Line>();
 	//private ArrayList<Line> filterLinesOutput = new ArrayList<Line>();
-	private Boolean getMatInfoEmpty;
-	private Number getMatInfoChannels;
-	private Number getMatInfoCols;
-	private Number getMatInfoRows;
-	private Number getMatInfoHighValue;
+	//private Boolean getMatInfoEmpty;
+	//private Number getMatInfoChannels;
+	//private Number getMatInfoCols;
+	//private Number getMatInfoRows;
+	//private Number getMatInfoHighValue;
 
 	// This would typically be set comparable to JPGS_TO_C
 	private static final boolean RUNNING_IMAGE_CAPTURE = true;
@@ -52,20 +52,20 @@ public class GripPipelineGym /*implements VisionPipeline*/ {
 	public void process(Mat source0, double loHue, double hiHue, double loSat, double hiSat, double loLum, double hiLum) {
 		
 		// Step Get_Mat_Info0:
-		Mat getMatInfoInput = source0;
-		Ref<Boolean> getMatInfoEmptyRef = new Ref<Boolean>();
-		Ref<Number> getMatInfoChannelsRef = new Ref<Number>();
-		Ref<Number> getMatInfoColsRef = new Ref<Number>();
-		Ref<Number> getMatInfoRowsRef = new Ref<Number>();
-		Ref<Number> getMatInfoHighValueRef = new Ref<Number>();
+		//Mat getMatInfoInput = source0;
+		//Ref<Boolean> getMatInfoEmptyRef = new Ref<Boolean>();
+		//Ref<Number> getMatInfoChannelsRef = new Ref<Number>();
+		//Ref<Number> getMatInfoColsRef = new Ref<Number>();
+		//Ref<Number> getMatInfoRowsRef = new Ref<Number>();
+		//Ref<Number> getMatInfoHighValueRef = new Ref<Number>();
 		
-		getMatInfo(getMatInfoInput, getMatInfoSize, getMatInfoEmptyRef, getMatInfoChannelsRef, getMatInfoColsRef, getMatInfoRowsRef, getMatInfoHighValueRef);
+		//getMatInfo(getMatInfoInput, getMatInfoSize, getMatInfoEmptyRef, getMatInfoChannelsRef, getMatInfoColsRef, getMatInfoRowsRef, getMatInfoHighValueRef);
 		
-		getMatInfoEmpty = getMatInfoEmptyRef.get();
-		getMatInfoChannels = getMatInfoChannelsRef.get();
-		getMatInfoCols = getMatInfoColsRef.get();
-		getMatInfoRows = getMatInfoRowsRef.get();
-		getMatInfoHighValue = getMatInfoHighValueRef.get();
+		//getMatInfoEmpty = getMatInfoEmptyRef.get();
+		//getMatInfoChannels = getMatInfoChannelsRef.get();
+		//getMatInfoCols = getMatInfoColsRef.get();
+		//getMatInfoRows = getMatInfoRowsRef.get();
+		//getMatInfoHighValue = getMatInfoHighValueRef.get();
 		
 	
 
@@ -177,7 +177,7 @@ public class GripPipelineGym /*implements VisionPipeline*/ {
 			}
 		}
 	}
-	
+	/*
 	public Size getMatInfoSize() {
 		return getMatInfoSize;
 	}
@@ -201,7 +201,7 @@ public class GripPipelineGym /*implements VisionPipeline*/ {
 	public Number getMatInfoHighValue() {
 		return getMatInfoHighValue;
 	}
-
+	
 	private void getMatInfo(Mat src, Size size, Ref<Boolean> empty, Ref<Number> channels, Ref<Number> cols, Ref<Number> rows, Ref<Number> highestValue) {
 	empty.set(Boolean.valueOf(src.empty()));
 	channels.set(Integer.valueOf(src.channels()));
@@ -212,44 +212,46 @@ public class GripPipelineGym /*implements VisionPipeline*/ {
 	size.height = matSize.height;
 	size.width = matSize.width;
 	}
-
-	private static class Ref<T> {
-		private T value;
+	*/
+	
+	
+	//private static class Ref<T> {
+	//	private T value;
 		
 		/**
 		 * Constructor for a Ref object.
 		 * @param initValue Type T initial value for the object.
 		 */
-		public Ref(T initValue) {
-			value = initValue;
-		}
+	//	public Ref(T initValue) {
+	//		value = initValue;
+	//	}
 
 		/**
 		 * Constructor for a Ref object without an initial value.
 		 * Equivalent to calling Ref(null)
 		 */
-		public Ref() {
-			this(null);
-		}
+	//	public Ref() {
+	//		this(null);
+	//	}
 
 		/**
 		 * Sets the object to contain a new value.
 		 *
 		 * @param newValue the new value being referenced
 		 */
-		public void set(T newValue) {
-			value = newValue;
-		}
+	//	public void set(T newValue) {
+	//		value = newValue;
+	//	}
 
 		/**
 		 * Gets the current referenced value
 		 *
 		 * @return the current referenced value
 		 */
-		public T get() {
-			return value;
-		}
-	}
+	//	public T get() {
+	//		return value;
+	//	}
+	//}
 
 	/**
 	 * Filters out lines that do not meet certain criteria.
