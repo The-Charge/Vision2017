@@ -27,23 +27,22 @@ import com.thecharge.GripPipelineGym.Line;
 import edu.wpi.first.wpilibj.networktables.NetworkTable;
 
 public class HelloOCV {
-	private static final boolean TROUBLESHOOTING_MODE = false;
+	private static final boolean TROUBLESHOOTING_MODE = true;
+	private static final boolean USE_VIDEO = false;
+	private static final boolean JPGS_TO_C = true;
+	private static final boolean WRITE_NETW_TBLS = false;
 	private static final boolean CALIBRATION_MODE = false;
 	private static final int MAX_CALIBR_PASS = 999;
-	private static final boolean USE_VIDEO = true;
-	private static final boolean JPGS_TO_C = false;
 	private static boolean userStop = false;
 	private static final double INCH_GAP_BETW = 6.25; // Distance between reflective targets
 	private static final double INCH_TGT_WIDE = 2; // Width of the reflective target
 	private static final double INCH_TGT_HEIGHT = 5; // Height of the reflective target
-	private static final double INCH_GND_TO_TGT = 10.75; // Distance from the ground to the bottom of the target
 	private static final double HALF_FIELD_ANGLE_H = 34;	// Half of the angle of view for the camera in operation
 	private static final double HALF_FIELD_ANGLE_V = 20.59;	// 21.3
 	private static final double INCH_IS_SAME_LINE = 0.25;
-	private static final double ROBOT_TURN_RADIUS = 24;		// Preferred turn radius in inches for the robot
-	private static final double DISTANCE_ON_COURSE = 36;	// Inches over which we prefer to approach the robot straight on
+	private static final double ROBOT_TURN_RADIUS = 18;		// Preferred turn radius in inches for the robot
+	private static final double DISTANCE_ON_COURSE = 24;	// Inches over which we prefer to approach the robot straight on
 	private static final double TARGET_WIDTH =  INCH_TGT_WIDE + INCH_GAP_BETW + INCH_TGT_WIDE;	// The width of the target in inches
-	private static final double OK_HL_GAP = 12;
 	private static final double RAD_TO_DEG = 57.29577951; // 360 / 2 / pi()
 	private static int pxlWidth = 0;
 	private static int pxlHeight = 0;
@@ -73,7 +72,7 @@ public class HelloOCV {
 	//BreakRoom => 71 / 110 / 17 / 253 / 12 / 255
 	//LTGym6f70d.jpg => 83 / 102 / 57 / 255 / 71 / 185
 	//BreakRoom0221 =>  73 / 171 / 3 / 61 / 96 / 181
-	private static final double INITIAL_WC_BRIGHTNESS = 25; //34 worked well initially;	//48;	//0;	//128;
+	private static final double INITIAL_WC_BRIGHTNESS = 24; //34 worked well initially;	//48;	//0;	//128;
 	private static final double INITIAL_WC_CONTRAST = 39;	//69;	//38;	//32;
 	private static final double INITIAL_WC_EXPOSURE = -2;	//-2;
 	private static final double INITIAL_WC_GAIN = 0;	//1;	//0;
@@ -129,13 +128,9 @@ public class HelloOCV {
 	private static double optHiSat = 0;
 	private static double optLoLum = 0;
 	private static double optHiLum = 0;
+	private static double optBrightness = 0;
+	private static double[] altWCBrightness = new double[8];
 	private static double atOptLineCount = 0;	//  The ocvLineCount value at the optimum tuning
-	//private static double atOptLoHue = 0;
-	//private static double atOptHiHue = 0;
-	//private static double atOptLoSat = 0;
-	//private static double atOptHiSat = 0;
-	//private static double atOptLoLum = 0;
-	//private static double atOptHiLum = 0;
 	private static double atOptVLnGr = 0;
 	private static double atOptLFStErrB = 0;
 	private static double atOptLFStErrT = 0;
@@ -148,8 +143,10 @@ public class HelloOCV {
 	private static long executionCount = 0;
 	private static int poorImageCount = 0;
 	private static boolean revertToJPG = false;
-	private static Mat hslTO;
+	private static Mat hslTO;					// The hslThresholdOutput storage matrix
+	private static Mat srcImage;				// The source image
 	private static Number hiPixelValue = 0;
+	private static int webcamSettings = 0;
 	
 	public static void main(String[] args) throws Exception {
 		Double dist2TargetTemp = 0.0;
@@ -166,6 +163,16 @@ public class HelloOCV {
 				System.out.println("The camera didn't open.");
 				throw new Exception("Can't open the camera.");
 	    	}
+	    	
+	    	// Assuming we're approaching the target, reduce brightness 
+	    	altWCBrightness[0] = INITIAL_WC_BRIGHTNESS;
+	    	altWCBrightness[1] = 18;
+	    	altWCBrightness[2] = 12;
+	    	altWCBrightness[3] = 6;
+	    	altWCBrightness[4] = 0;
+	    	altWCBrightness[5] = 36;
+	    	altWCBrightness[6] = 30;
+	    	altWCBrightness[7] = 24;
 	    	
 	    	double camSetting = 0;
 	    	//5 - CV_CAP_PROP_FPS Frame rate.
@@ -203,17 +210,23 @@ public class HelloOCV {
 	    	
 		}
 		
+		/*
 		//Network Table Setup
 		NetworkTable.setClientMode();
-		NetworkTable.setIPAddress("127.0.0.1");
-		NetworkTable.setIPAddress("10.26.19.2");
+		if (WRITE_NETW_TBLS) {
+			NetworkTable.setIPAddress("10.26.19.2");
+		} else {
+			NetworkTable.setIPAddress("127.0.0.1");
+		}
 		NetworkTable table2Rbt = NetworkTable.getTable("Vision");
+		*/
 		
 		if (CALIBRATION_MODE) {
 			calibrPass = 0;
 		} else {
 			calibrPass = MAX_CALIBR_PASS;	// Typically we use 99 to execute one time;
 		}
+		
 		System.out.println("Starting");
 		do {
 			if (!USE_VIDEO) {
@@ -223,7 +236,7 @@ public class HelloOCV {
 				
 				// Load a test image from file for development
 				image = Imgcodecs.imread(jpgFile);
-				
+				srcImage = image;
 
 				/*
 				// Experiment with reading a wmv file rather than a jpg
@@ -233,24 +246,40 @@ public class HelloOCV {
 				cap.read(image);
 				*/
 			} else if (revertToJPG) {
+				// Save off the image that brought on this condition
+				if (TROUBLESHOOTING_MODE && (webcamSettings == 0)) {
+					Imgcodecs.imwrite("Problem_Image.jpg", srcImage);
+				}
+				
 				selectNextParameterSet();
+				
+				// Choose an alternate brightness setting assuming that we may have the wrong setup
+		    	camera.set(Videoio.CAP_PROP_BRIGHTNESS, altWCBrightness[webcamSettings]);
+		    	
+		    	// At least temporarily we will need to process a jpg to free up memory
 				image = Imgcodecs.imread("DummyImage.jpg");
+				srcImage = image;
 				revertToJPG = false;
 			} else {
 				selectNextParameterSet();
 				System.out.println("Reading next image");
 				camera.read(image);
+				srcImage = image;
 			}
 			
 			// Having selected a source, process the image (this is the dominant call)
 			processSingleImage(image);
 			
-			// Having concluded analysis, update the Network Tables
-			table2Rbt.putNumber("Distance", dist2Target/12);
-			table2Rbt.putNumber("RobotAngle", angleTrajectory);		// This now depicts the recommended angle from current course.
-			table2Rbt.putNumber("TargetAngle", angOfIncT);
-			table2Rbt.putNumber("Quality", imageQuality);
-			table2Rbt.putNumber("ImageCount", executionCount);
+			/*
+			if (WRITE_NETW_TBLS) {
+				// Having concluded analysis, update the Network Tables
+				table2Rbt.putNumber("Distance", dist2Target/12);
+				table2Rbt.putNumber("RobotAngle", angleTrajectory);		// This now depicts the recommended angle from current course.
+				table2Rbt.putNumber("TargetAngle", angOfIncT);
+				table2Rbt.putNumber("Quality", imageQuality);
+				table2Rbt.putNumber("ImageCount", executionCount);
+			}
+			*/
 			
 			// Moving to continuous mode (or even calibration, some variables will need to be reset
 			dist2TargetTemp = dist2Target;
@@ -285,7 +314,7 @@ public class HelloOCV {
 		// Continue processing only if we're getting an image
 		ocvLineCount = lines.size();
 		if (ocvLineCount > 3) {
-			showImageInfo(image);
+			if (JPGS_TO_C) showImageInfo(image);
 			
 			double[] xAvgDiff = new double[ocvLineCount];
 			String[] edgeID = new String[ocvLineCount];
@@ -326,10 +355,10 @@ public class HelloOCV {
 			// Save our line data to srtLineOutput.txt
 			exportLineData(targetLines);
 			
-			// Overlay the original image with the identified lines to img_with_lines.jpg
+			// Overlay the original image with the identified lines to Image_with_lines.jpg
 			outputOverlayedLines(image, targetLines);
 			
-			// Get the x average from x1 and x2 for each line so that we can evaluate vertical lines
+			// Characterize the differential spacing between vertical line groups
 			calcXAvgDiff(xAvgDiff, targetLines);
 			
 			// Determine that differential between x values at which we would consider the lines to be the same line
@@ -378,6 +407,7 @@ public class HelloOCV {
 				// Having chosen our four best lines, determine where we'll look for our horizontal boundaries of the targets
 				findHorizontalLines(edgeID, targetLines, nominalVerticalLineX, yMinVerticalLineSet, yMaxVerticalLineSet, xMinHorizontalLine, xMaxHorizontalLine, xMinHorizontalLineSet, xMaxHorizontalLineSet);
 				
+				// While actually derived some time ago, write to file the HSL output
 				generateGripImage(gp);
 				
 				// Using x,y pairs from predefined positions within the line segments, perform a line fit for target top and bottom 
@@ -529,7 +559,14 @@ public class HelloOCV {
 	private static void selectNextParameterSet() {
 		
 		if (USE_VIDEO) {
-			
+			// We may want to alter camera settings if we aren't getting data
+			if (revertToJPG) {
+				if (webcamSettings == 7) {
+					webcamSettings = 0;
+				} else {
+					webcamSettings ++;
+				}
+			}
 		} else {
 			//jpgFile = new String("Picture 6.jpg");
 			//jpgFile = new String("LTGym3ft.jpg");	
@@ -540,12 +577,12 @@ public class HelloOCV {
 			//jpgFile = new String("KitchLtOn20in60d.jpg");
 			//jpgFile = new String("KitchLtOn46in45d.jpg");
 			//jpgFile = new String("OriginalVImage.jpg");
-			jpgFile = new String("LTGym6f45d.jpg");
+			//jpgFile = new String("LTGym6f45d.jpg");
 			//jpgFile = new String("LTGym6f70d.jpg");
 			//jpgFile = new String("LTGym8ft.jpg");
 			//jpgFile = new String("LTGym18ft.jpg"); 
 			//jpgFile = new String("BreakRoom0221.jpg");
-			//jpgFile = new String("TestImage1.jpg");
+			jpgFile = new String("TestImage1.jpg");
 			//jpgFile = new String("Image_for_PostAnalysis.jpg");
 		}
 
@@ -1506,6 +1543,8 @@ public class HelloOCV {
 			rTgtAccrW = rectRatio / refRatio;
 			if (TROUBLESHOOTING_MODE) System.out.println("The right target accuracy is 1 : " + Double.toString(rTgtAccrW));
 			
+		} else if (vLineSet < 3) {
+			// We need to gracefully indicate that processing didn't go well
 		} else {
 			// Find the three sets of signals that yield the best 6.25 / 2 spacing ratio
 			for (int x = 0; x <= (vLineSet-3); x++) {
@@ -1549,6 +1588,7 @@ public class HelloOCV {
 				System.out.println("No definitive target found.");
 				//throw new Exception("vLineSet is perhaps greater than 4 and handling logic is required.");
 			}
+			
 			if (TROUBLESHOOTING_MODE) System.out.println("Selecting verticals : " + Integer.toString(vertSel[0]) + ":" + Integer.toString(vertSel[1]) + ":" + Integer.toString(vertSel[2]) + ":" + Integer.toString(vertSel[3]));
 			tgt1LeftXPtr = vertSel[0];
 			tgt1RightXPtr = vertSel[1];
@@ -1570,40 +1610,37 @@ public class HelloOCV {
 		if (TROUBLESHOOTING_MODE) System.out.println();
 		
 		
-		
-		// Save our weighted lines to a file if analysis is needed (false to create)
-		try(PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter("weighted_line_segments.txt", false)))) {
-		    out.println("NomX,WtdVLen,LineID,");
-		}catch (IOException e) {
-		    System.err.println(e);
-		}			
-		
-		// (true to append)
-		try(PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter("weighted_line_segments.txt", true)))) {
-			for (int x = 0; x <= (vLineSet); x++) {
-				String LineOut;
-				LineOut = Double.toString(nominalVerticalLineX[x]);
-				LineOut += "," + Double.toString(totalizedVerticalLen[x]);
-				
-				if (x == tgt1LeftXPtr) {
-					LineOut += ",T1L";
-				} else if (x == tgt1RightXPtr) {
-					LineOut += ",T1R";
-				} else if (x == tgt2LeftXPtr) {
-					LineOut += ",T2L";
-				} else if (x == tgt2RightXPtr) {
-					LineOut += ",T2R";
+		if (vLineSet > 0) {
+			// Save our weighted lines to a file if analysis is needed (false to create)
+			try(PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter("weighted_line_segments.txt", false)))) {
+			    out.println("NomX,WtdVLen,LineID,");
+			}catch (IOException e) {
+			    System.err.println(e);
+			}			
+			
+			// (true to append)
+			try(PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter("weighted_line_segments.txt", true)))) {
+				for (int x = 0; x <= (vLineSet); x++) {
+					String LineOut;
+					LineOut = Double.toString(nominalVerticalLineX[x]);
+					LineOut += "," + Double.toString(totalizedVerticalLen[x]);
+					
+					if (x == tgt1LeftXPtr) {
+						LineOut += ",T1L";
+					} else if (x == tgt1RightXPtr) {
+						LineOut += ",T1R";
+					} else if (x == tgt2LeftXPtr) {
+						LineOut += ",T2L";
+					} else if (x == tgt2RightXPtr) {
+						LineOut += ",T2R";
+					}
+					
+					out.println(LineOut);
 				}
-				
-				out.println(LineOut);
-			}
-		}catch (IOException e) {
-		    System.err.println(e);
-		}			
-		
-		
-		
-		
+			}catch (IOException e) {
+			    System.err.println(e);
+			}			
+		}
 	}
 
 	private static void findLongestContiguousVLines(TargetLine[] targetLines, double[] nominalVerticalLineX,
@@ -1925,9 +1962,9 @@ public class HelloOCV {
 		for (int x = 1; x < ocvLineCount; x++) {
 
 			// Allow a troubleshooting break point
-			if (x == 11) {
-				userStop = true;
-			}
+			//if (x == 11) {
+			//	userStop = true;
+			//}
 			
 			// Note that we do nothing for non-vertical lines
 			if (xAvgDiff[x] > isSameLine) {
@@ -2049,7 +2086,7 @@ public class HelloOCV {
 			Imgproc.line(image, targetLines[x].point1(), targetLines[x].point2(), new Scalar(0,255,255), 1);
 		}
 		// Save a copy of the amended file with the identified lines
-		if (JPGS_TO_C) Imgcodecs.imwrite("img_with_lines.jpg", image);
+		if (JPGS_TO_C) Imgcodecs.imwrite("Image_with_lines.jpg", image);
 	}
 
 	private static void exportLineData(TargetLine[] targetLines) throws IOException {
