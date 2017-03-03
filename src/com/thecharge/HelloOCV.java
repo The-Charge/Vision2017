@@ -235,7 +235,7 @@ public class HelloOCV {
 				
 				// Load a test image from file for development
 				image = Imgcodecs.imread(jpgFile);
-				srcImage = image;
+				if (TROUBLESHOOTING_MODE) srcImage = image;
 
 				/*
 				// Experiment with reading a wmv file rather than a jpg
@@ -258,13 +258,13 @@ public class HelloOCV {
 		    	
 		    	// At least temporarily we will need to process a jpg to free up memory
 				image = Imgcodecs.imread("DummyImage.jpg");
-				srcImage = image;
+				if (TROUBLESHOOTING_MODE) srcImage = image;
 				revertToJPG = false;
 			} else {
 				selectNextParameterSet();
 				System.out.println("Reading next image");
 				camera.read(image);
-				srcImage = image;
+				if (TROUBLESHOOTING_MODE) srcImage = image;
 			}
 			
 			// Having selected a source, process the image (this is the dominant call)
