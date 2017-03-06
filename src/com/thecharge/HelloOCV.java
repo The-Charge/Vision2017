@@ -26,12 +26,20 @@ import com.thecharge.GripPipelineGym.Line;
 
 import edu.wpi.first.wpilibj.networktables.NetworkTable;
 
+import java.awt.*;
+import java.awt.event.*;
+import javax.swing.*;
+import javax.swing.event.*;
+
 public class HelloOCV {
 	private static final boolean TROUBLESHOOTING_MODE = false;
 	private static final boolean USE_VIDEO = true;
-	private static final boolean JPGS_TO_C = false;
-	private static final boolean WRITE_NETW_TBLS = true;
+	private static final boolean JPGS_TO_C = true;
+	private static final boolean WRITE_NETW_TBLS = false;
+	private static final boolean INIT_WEBCAM_SETTINGS = false;
 	private static final boolean CALIBRATION_MODE = false;
+	private static boolean jpgMemMgmt = false;		// Recommended to be set true until the memory management issue is solved
+	private static boolean analyzeCamera = true;	// Generate a CSV file tracking camera settings vs results
 	private static final int MAX_CALIBR_PASS = 999;
 	private static boolean userStop = false;
 	private static final double INCH_GAP_BETW = 6.25; // Distance between reflective targets
@@ -62,12 +70,12 @@ public class HelloOCV {
 	private static double tanHlfAngleH = Math.tan(Math.toRadians(HALF_FIELD_ANGLE_H));
 	private static double tanHlfAngleV = Math.tan(Math.toRadians(HALF_FIELD_ANGLE_V));
 	private static double dist2Target = 0;	// Calculated distance to the target in inches
-	private static final double INITIAL_LO_HUE = 83;	//88;	//40,65,68,32, 73;		//74;
-	private static final double INITIAL_HI_HUE = 108;	//94;	//142,120,117, 103;	//96;	// 93.99317406143345;
-	private static final double INITIAL_LO_SATURATION = 112;	//183;	//156,211, 14;	//40;	//45.86330935251798;
-	private static final double INITIAL_HI_SATURATION = 255;	//250;	//255, 255;	//140;	//153;	// 128.80546075085323;
-	private static final double INITIAL_LO_LUMIN = 71;	//26;	//89,99,66, 135;	//80.26079136690647;
-	private static final double INITIAL_HI_LUMIN = 244;	//132;	//133,255,166, 235;	//163.61774744027304;
+	private static final double INITIAL_LO_HUE = 40;	//83;	//88;	//40,65,68,32, 73;		//74;
+	private static final double INITIAL_HI_HUE = 71;	//108;	//94;	//142,120,117, 103;	//96;	// 93.99317406143345;
+	private static final double INITIAL_LO_SATURATION = 64;	//112;	//183;	//156,211, 14;	//40;	//45.86330935251798;
+	private static final double INITIAL_HI_SATURATION = 240;	//255;	//250;	//255, 255;	//140;	//153;	// 128.80546075085323;
+	private static final double INITIAL_LO_LUMIN = 131;	//71;	//26;	//89,99,66, 135;	//80.26079136690647;
+	private static final double INITIAL_HI_LUMIN = 242;	//244;	//132;	//133,255,166, 235;	//163.61774744027304;
 	//LTGym8ft => 81 / 114 / 7 / 140 / 85 / 254
 	//BreakRoom => 71 / 110 / 17 / 253 / 12 / 255
 	//LTGym6f70d.jpg => 83 / 102 / 57 / 255 / 71 / 185
@@ -131,6 +139,7 @@ public class HelloOCV {
 	private static double optHiLum = 0;
 	private static double optBrightness = 0;
 	private static double[] altWCBrightness = new double[8];
+	private static double[] altWCContrast = new double[8];
 	private static double atOptLineCount = 0;	//  The ocvLineCount value at the optimum tuning
 	private static double atOptVLnGr = 0;
 	private static double atOptLFStErrB = 0;
@@ -148,6 +157,7 @@ public class HelloOCV {
 	private static Mat srcImage;				// The source image
 	private static Number hiPixelValue = 0;
 	private static int webcamSettings = 0;
+	private static VideoCapture camera = null;
 	
 	public static void main(String[] args) throws Exception {
 		Double dist2TargetTemp = 0.0;
@@ -155,18 +165,26 @@ public class HelloOCV {
 		//System.loadLibrary("opencv_ffmpeg300_64");
 		Mat image = new Mat();
 		
-		VideoCapture camera = null;
-		
 		if (USE_VIDEO) {
-			camera = new VideoCapture(0);
+			camera = new VideoCapture(1);
 			//camera = new VideoCapture("GymCartApprch.wmv");
 	    	if(!camera.isOpened()){
 				System.out.println("The camera didn't open.");
 				throw new Exception("Can't open the camera.");
 	    	}
 	    	
+	    	// While we're trying to understand the camera behavior, generate an analysis file
+			if ((analyzeCamera) && (USE_VIDEO)) {			
+				// Choose an efficient means to repetitively append an analysis file (create new here)
+				try(PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter("WebCamVRslt.csv", false)))) {
+				    out.println("FPS,Brightness,Contrast,Exposure,Gain,Saturation,WBBluU,WBRedV,Hue,Aperture,AutoExpos,AutoFocus,Backlight,ExpProgr,Mode,Distance,Score");
+				}catch (IOException e) {
+				    System.err.println(e);
+				}			
+			}	
+
 	    	// Assuming we're approaching the target, reduce brightness 
-	    	altWCBrightness[0] = INITIAL_WC_BRIGHTNESS;
+	    	altWCBrightness[0] = INITIAL_WC_BRIGHTNESS;	// Nominally 24
 	    	altWCBrightness[1] = 18;
 	    	altWCBrightness[2] = 12;
 	    	altWCBrightness[3] = 6;
@@ -174,6 +192,15 @@ public class HelloOCV {
 	    	altWCBrightness[5] = 36;
 	    	altWCBrightness[6] = 30;
 	    	altWCBrightness[7] = 24;
+	    	
+	    	altWCContrast[0] = INITIAL_WC_CONTRAST;		// Nominally 39
+	    	altWCContrast[1] = 20;		
+	    	altWCContrast[2] = 0;	
+	    	altWCContrast[3] = INITIAL_WC_CONTRAST;		
+	    	altWCContrast[4] = 20;	
+	    	altWCContrast[5] = 0;		
+	    	altWCContrast[6] = INITIAL_WC_CONTRAST;	
+	    	altWCContrast[7] = 30;		
 	    	
 	    	double camSetting = 0;
 	    	//5 - CV_CAP_PROP_FPS Frame rate.
@@ -186,39 +213,41 @@ public class HelloOCV {
 	    	
 	    	
 	    	camSetting = camera.get(Videoio.CAP_PROP_BRIGHTNESS);	
-	    	camera.set(Videoio.CAP_PROP_BRIGHTNESS, INITIAL_WC_BRIGHTNESS);	// 18, 66, 142, 32, 73 // 66  //10 - CV_CAP_PROP_BRIGHTNESS Brightness of the image (only for cameras).
+	    	if (INIT_WEBCAM_SETTINGS) camera.set(Videoio.CAP_PROP_BRIGHTNESS, INITIAL_WC_BRIGHTNESS);	// 18, 66, 142, 32, 73 // 66  //10 - CV_CAP_PROP_BRIGHTNESS Brightness of the image (only for cameras).
 	    	
 	    	camSetting = camera.get(Videoio.CAP_PROP_CONTRAST);	
-	    	camera.set(Videoio.CAP_PROP_CONTRAST, INITIAL_WC_CONTRAST);		// 90, 128, 32, 66, 128, 42, 32  //11 - CV_CAP_PROP_CONTRAST Contrast of the image (only for cameras).
+	    	if (INIT_WEBCAM_SETTINGS) camera.set(Videoio.CAP_PROP_CONTRAST, INITIAL_WC_CONTRAST);		// 90, 128, 32, 66, 128, 42, 32  //11 - CV_CAP_PROP_CONTRAST Contrast of the image (only for cameras).
 	    	
 	    	camSetting = camera.get(Videoio.CAP_PROP_EXPOSURE);	
-	    	camera.set(Videoio.CAP_PROP_EXPOSURE, INITIAL_WC_EXPOSURE); 	// -3, -1, -2 -3 -2, -1  // 15 - CV_CAP_PROP_EXPOSURE Exposure (only for cameras).
+	    	if (INIT_WEBCAM_SETTINGS) camera.set(Videoio.CAP_PROP_EXPOSURE, INITIAL_WC_EXPOSURE); 	// -3, -1, -2 -3 -2, -1  // 15 - CV_CAP_PROP_EXPOSURE Exposure (only for cameras).
 	    	
 	    	camSetting = camera.get(Videoio.CAP_PROP_GAIN);	
-	    	camera.set(Videoio.CAP_PROP_GAIN, INITIAL_WC_GAIN);			// 16, 8, 44, 9, 40, 9, 44  // 14 - CV_CAP_PROP_GAIN Gain of the image (only for cameras).
+	    	if (INIT_WEBCAM_SETTINGS) camera.set(Videoio.CAP_PROP_GAIN, INITIAL_WC_GAIN);			// 16, 8, 44, 9, 40, 9, 44  // 14 - CV_CAP_PROP_GAIN Gain of the image (only for cameras).
 	    	
 	    	camSetting = camera.get(Videoio.CAP_PROP_SATURATION);	
-	    	camera.set(Videoio.CAP_PROP_SATURATION, INITIAL_WC_SATURATION);			// 255, 209, 186, 35, 255 // 12 - CV_CAP_PROP_SATURATION Saturation of the image (only for cameras).
+	    	if (INIT_WEBCAM_SETTINGS) camera.set(Videoio.CAP_PROP_SATURATION, INITIAL_WC_SATURATION);			// 255, 209, 186, 35, 255 // 12 - CV_CAP_PROP_SATURATION Saturation of the image (only for cameras).
 	    	
 	    	camSetting = camera.get(Videoio.CAP_PROP_WHITE_BALANCE_BLUE_U);	
-	    	camera.set(Videoio.CAP_PROP_WHITE_BALANCE_BLUE_U, INITIAL_WC_WHTBALBLU);		//6500, 2800, 6500
+	    	if (INIT_WEBCAM_SETTINGS) camera.set(Videoio.CAP_PROP_WHITE_BALANCE_BLUE_U, INITIAL_WC_WHTBALBLU);		//6500, 2800, 6500
 	    	
 	    	camSetting = camera.get(Videoio.CAP_PROP_WHITE_BALANCE_RED_V);	
-	    	camera.set(Videoio.CAP_PROP_WHITE_BALANCE_RED_V, INITIAL_WC_WHTBALRED);		//-1, 6500, -1, 6500
+	    	if (INIT_WEBCAM_SETTINGS) camera.set(Videoio.CAP_PROP_WHITE_BALANCE_RED_V, INITIAL_WC_WHTBALRED);		//-1, 6500, -1, 6500
 	    	
 	    	camSetting = camera.get(Videoio.CAP_PROP_HUE);	
-	    	camera.set(Videoio.CAP_PROP_HUE, INITIAL_WC_HUE);	// 3.6305E7, 4.04987E7, 4.3513e7, 3.84e7, //13 - CV_CAP_PROP_HUE Hue of the image (only for cameras).
+	    	if (INIT_WEBCAM_SETTINGS) camera.set(Videoio.CAP_PROP_HUE, INITIAL_WC_HUE);	// 3.6305E7, 4.04987E7, 4.3513e7, 3.84e7, //13 - CV_CAP_PROP_HUE Hue of the image (only for cameras).
 	    	
 		}
 		
 		//Network Table Setup
-		NetworkTable.setClientMode();
+		/*
+		 * NetworkTable.setClientMode();
 		if (WRITE_NETW_TBLS) {
 			NetworkTable.setIPAddress("10.26.19.2");
 		} else {
 			NetworkTable.setIPAddress("127.0.0.1");
 		}
 		NetworkTable table2Rbt = NetworkTable.getTable("Vision");
+		*/
 		
 		if (CALIBRATION_MODE) {
 			calibrPass = 0;
@@ -226,6 +255,16 @@ public class HelloOCV {
 			calibrPass = MAX_CALIBR_PASS;	// Typically we use 99 to execute one time;
 		}
 		
+        javax.swing.SwingUtilities.invokeLater(new Runnable() {
+            public void run() {
+                createAndShowGUI();
+            }
+        });
+
+        
+        
+        
+        
 		System.out.println("Starting");
 		do {
 			if (!USE_VIDEO) {
@@ -254,7 +293,7 @@ public class HelloOCV {
 				selectNextParameterSet();
 				
 				// Choose an alternate brightness setting assuming that we may have the wrong setup
-		    	camera.set(Videoio.CAP_PROP_BRIGHTNESS, altWCBrightness[webcamSettings]);
+				if (INIT_WEBCAM_SETTINGS) camera.set(Videoio.CAP_PROP_BRIGHTNESS, altWCBrightness[webcamSettings]);
 		    	
 		    	// At least temporarily we will need to process a jpg to free up memory
 				image = Imgcodecs.imread("DummyImage.jpg");
@@ -270,6 +309,7 @@ public class HelloOCV {
 			// Having selected a source, process the image (this is the dominant call)
 			processSingleImage(image);
 			
+			/*
 			if (WRITE_NETW_TBLS) {
 				// Having concluded analysis, update the Network Tables
 				table2Rbt.putNumber("Distance", dist2Target/12);
@@ -278,6 +318,7 @@ public class HelloOCV {
 				table2Rbt.putNumber("Quality", imageQuality);
 				table2Rbt.putNumber("ImageCount", executionCount);
 			}
+			*/
 			
 			// Moving to continuous mode (or even calibration, some variables will need to be reset
 			dist2TargetTemp = dist2Target;
@@ -294,6 +335,22 @@ public class HelloOCV {
 			camera.release();
 	}
 
+	private static void createAndShowGUI() {
+        //Create and set up the window.
+		// Establish a frame where we'll allow the operator to tune and view
+        JFrame ocvframe = new JFrame("visionFRC2619");
+        ocvframe.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+ 
+        //Add the ubiquitous "Hello World" label.
+        JLabel ocvlabel = new JLabel("ocv2619");
+        ocvframe.getContentPane().add(ocvlabel);
+ 
+        //Display the window.
+        ocvframe.pack();
+        ocvframe.setVisible(true);
+        
+    }
+	
 	private static void processSingleImage(Mat image) throws IOException, Exception {
 
 		if (executionCount == 0) Imgcodecs.imwrite("OriginalImage.jpg", image);
@@ -447,7 +504,7 @@ public class HelloOCV {
 			imageQuality = 0;
 			//System.out.println("Less than 3 lines were found in the image :" + Double.toString(ocvLineCount));
 			System.out.println("Less than 3 lines were found in the image: " + ocvLineCount);
-			revertToJPG = true;
+			if (jpgMemMgmt) revertToJPG = true;
 		}
 	}
 
@@ -878,6 +935,35 @@ public class HelloOCV {
 			}
 			
 			if (calibrPass < 100) calibrPass ++;
+			
+		} else if ((analyzeCamera) && (USE_VIDEO)) {
+			// Collect a running tally of camera settings vs results
+			
+			// Choose an efficient means to repetitively append an analysis file (append here)
+			try(PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter("WebCamVRslt.csv", true)))) {
+				String LineOut;
+				LineOut = Double.toString(camera.get(Videoio.CAP_PROP_FPS));
+				LineOut += "," + Double.toString(camera.get(Videoio.CAP_PROP_BRIGHTNESS));
+				LineOut += "," + Double.toString(camera.get(Videoio.CAP_PROP_CONTRAST));
+				LineOut += "," + Double.toString(camera.get(Videoio.CAP_PROP_EXPOSURE));
+				LineOut += "," + Double.toString(camera.get(Videoio.CAP_PROP_GAIN));
+				LineOut += "," + Double.toString(camera.get(Videoio.CAP_PROP_SATURATION));
+				LineOut += "," + Double.toString(camera.get(Videoio.CAP_PROP_WHITE_BALANCE_BLUE_U));
+				LineOut += "," + Double.toString(camera.get(Videoio.CAP_PROP_WHITE_BALANCE_RED_V));
+				LineOut += "," + Double.toString(camera.get(Videoio.CAP_PROP_HUE));
+				LineOut += "," + Double.toString(camera.get(Videoio.CAP_PROP_APERTURE));
+				LineOut += "," + Double.toString(camera.get(Videoio.CAP_PROP_AUTO_EXPOSURE));
+				LineOut += "," + Double.toString(camera.get(Videoio.CAP_PROP_AUTOFOCUS));
+				LineOut += "," + Double.toString(camera.get(Videoio.CAP_PROP_BACKLIGHT));
+				LineOut += "," + Double.toString(camera.get(Videoio.CAP_PROP_EXPOSUREPROGRAM));
+				LineOut += "," + Double.toString(camera.get(Videoio.CAP_PROP_MODE));
+				LineOut += "," + Double.toString(dist2Target);
+				LineOut += "," + Double.toString(imageQuality);
+				out.println(LineOut);
+			}catch (IOException e) {
+			    System.err.println(e);
+			}
+
 			
 		}
 	}
