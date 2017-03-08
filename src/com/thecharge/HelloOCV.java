@@ -32,14 +32,14 @@ import javax.swing.*;
 import javax.swing.event.*;
 
 public class HelloOCV {
-	private static final boolean TROUBLESHOOTING_MODE = false;
-	private static final boolean USE_VIDEO = true;
+	private static final boolean TROUBLESHOOTING_MODE = true;
+	private static final boolean USE_VIDEO = false;
 	private static final boolean JPGS_TO_C = true;
 	private static final boolean WRITE_NETW_TBLS = false;
 	private static final boolean INIT_WEBCAM_SETTINGS = false;
 	private static final boolean CALIBRATION_MODE = false;
 	private static boolean jpgMemMgmt = false;		// Recommended to be set true until the memory management issue is solved
-	private static boolean analyzeCamera = true;	// Generate a CSV file tracking camera settings vs results
+	private static boolean analyzeCamera = false;	// Generate a CSV file tracking camera settings vs results
 	private static final int MAX_CALIBR_PASS = 999;
 	private static boolean userStop = false;
 	private static final double INCH_GAP_BETW = 6.25; // Distance between reflective targets
@@ -55,13 +55,13 @@ public class HelloOCV {
 	private static int pxlWidth = 0;
 	private static int pxlHeight = 0;
 	private static int ocvLineCount = 0;
+	private static int tgt1LeftXPtr = 0;
 	private static int tgt1RightXPtr = 0;
 	private static int tgt2LeftXPtr = 0;
 	private static int tgt2RightXPtr = 0;
 	private static double lTgtAccrW = 0;
 	private static double rTgtAccrW = 0;
 	private static int vLineSet = 0; // How many sets of vertical lines are observed
-	private static int tgt1LeftXPtr = 0;
 	private static int calibrPass = 0;
 	private static int calibrPhase = 0;
 	private static double calibrScore = 0;
@@ -70,12 +70,12 @@ public class HelloOCV {
 	private static double tanHlfAngleH = Math.tan(Math.toRadians(HALF_FIELD_ANGLE_H));
 	private static double tanHlfAngleV = Math.tan(Math.toRadians(HALF_FIELD_ANGLE_V));
 	private static double dist2Target = 0;	// Calculated distance to the target in inches
-	private static final double INITIAL_LO_HUE = 40;	//83;	//88;	//40,65,68,32, 73;		//74;
-	private static final double INITIAL_HI_HUE = 71;	//108;	//94;	//142,120,117, 103;	//96;	// 93.99317406143345;
-	private static final double INITIAL_LO_SATURATION = 64;	//112;	//183;	//156,211, 14;	//40;	//45.86330935251798;
-	private static final double INITIAL_HI_SATURATION = 240;	//255;	//250;	//255, 255;	//140;	//153;	// 128.80546075085323;
-	private static final double INITIAL_LO_LUMIN = 131;	//71;	//26;	//89,99,66, 135;	//80.26079136690647;
-	private static final double INITIAL_HI_LUMIN = 242;	//244;	//132;	//133,255,166, 235;	//163.61774744027304;
+	private static final double INITIAL_LO_HUE = 57;	//83;	//88;	//40,65,68,32, 73;		//74;
+	private static final double INITIAL_HI_HUE = 95;	//108;	//94;	//142,120,117, 103;	//96;	// 93.99317406143345;
+	private static final double INITIAL_LO_SATURATION = 63;	//112;	//183;	//156,211, 14;	//40;	//45.86330935251798;
+	private static final double INITIAL_HI_SATURATION = 247;	//255;	//250;	//255, 255;	//140;	//153;	// 128.80546075085323;
+	private static final double INITIAL_LO_LUMIN = 67;	//71;	//26;	//89,99,66, 135;	//80.26079136690647;
+	private static final double INITIAL_HI_LUMIN = 205;	//244;	//132;	//133,255,166, 235;	//163.61774744027304;
 	//LTGym8ft => 81 / 114 / 7 / 140 / 85 / 254
 	//BreakRoom => 71 / 110 / 17 / 253 / 12 / 255
 	//LTGym6f70d.jpg => 83 / 102 / 57 / 255 / 71 / 185
@@ -112,6 +112,8 @@ public class HelloOCV {
 	private static double stdErrT = 0;
 	private static double stdErrB = 0;
 	private static double incrX = 0;
+	private static double minYGoodLine = 0;	// The minimum Y value observed for a line assessed to be part of the target
+	private static double maxYGoodLine = 0;	// The maximum Y value observed for a line assessed to be part of the target
 	private static double nomYTgtTop = 0;
 	private static double nomYTgtBtm = 0;
 	private static double testX1 = 0;
@@ -125,11 +127,11 @@ public class HelloOCV {
 	private static double topIntercept = 0;
 	private static double yAtXFitTL = 0;
 	private static double yAtXFitTR = 0;
+	private static double yAtXFitBL = 0;
+	private static double yAtXFitBR = 0;
 	private static double yFit = 0;
 	private static double bottomSlope = 0;
 	private static double bottomIntercept = 0;
-	private static double yAtXFitBL = 0;
-	private static double yAtXFitBR = 0;
 	private static double bestWt = 0;
 	private static double optLoHue = 0;		// These are the determined optimal values during calibration
 	private static double optHiHue = 0;
@@ -155,7 +157,7 @@ public class HelloOCV {
 	private static boolean revertToJPG = false;
 	private static Mat hslTO;					// The hslThresholdOutput storage matrix
 	private static Mat srcImage;				// The source image
-	private static Number hiPixelValue = 0;
+	//private static Number hiPixelValue = 0;
 	private static int webcamSettings = 0;
 	private static VideoCapture camera = null;
 	
@@ -166,7 +168,7 @@ public class HelloOCV {
 		Mat image = new Mat();
 		
 		if (USE_VIDEO) {
-			camera = new VideoCapture(1);
+			camera = new VideoCapture(0);
 			//camera = new VideoCapture("GymCartApprch.wmv");
 	    	if(!camera.isOpened()){
 				System.out.println("The camera didn't open.");
@@ -236,6 +238,8 @@ public class HelloOCV {
 	    	camSetting = camera.get(Videoio.CAP_PROP_HUE);	
 	    	if (INIT_WEBCAM_SETTINGS) camera.set(Videoio.CAP_PROP_HUE, INITIAL_WC_HUE);	// 3.6305E7, 4.04987E7, 4.3513e7, 3.84e7, //13 - CV_CAP_PROP_HUE Hue of the image (only for cameras).
 	    	
+		} else {
+			analyzeCamera = false;
 		}
 		
 		//Network Table Setup
@@ -255,15 +259,14 @@ public class HelloOCV {
 			calibrPass = MAX_CALIBR_PASS;	// Typically we use 99 to execute one time;
 		}
 		
+		/*
+		// Open up a GUI for user interactivity
         javax.swing.SwingUtilities.invokeLater(new Runnable() {
             public void run() {
                 createAndShowGUI();
             }
-        });
-
-        
-        
-        
+        });  
+        */
         
 		System.out.println("Starting");
 		do {
@@ -326,8 +329,8 @@ public class HelloOCV {
 			executionCount ++;
 			//System.currentTimeMillis()
 			
-		} while ((calibrPass < MAX_CALIBR_PASS) || (USE_VIDEO));
-		//} while (executionCount < 1);
+		//} while ((calibrPass < MAX_CALIBR_PASS) || (USE_VIDEO));
+		} while (executionCount < 1);
 		//} while ((dist2Target == 0) || (Double.toString(dist2Target).equals("NaN")));
 		//} while ((dist2TargetTemp == 0) || (dist2TargetTemp.isNaN()));
 		
@@ -390,7 +393,7 @@ public class HelloOCV {
 			}
 
 			
-			// Create a "matrix" for use during analysis
+			// Create a color "matrix" from the B&W matrix for use during analysis
 			Mat temp = gp.hslThresholdOutput();
 			hslTO = new Mat();
 			Imgproc.cvtColor(temp, hslTO, Imgproc.COLOR_GRAY2BGR);
@@ -453,6 +456,34 @@ public class HelloOCV {
 				// While we hope for four vertical lines, choose the best four if there are more
 				findFourBestVLines(totalizedVerticalLen, nominalVerticalLineX);
 				
+				// Establish upper and lower limits on our horizontal line Y values just in case
+				minYGoodLine = pxlHeight;
+				if (minYGoodLine > yMinVerticalLineSet[tgt1LeftXPtr]) {
+					minYGoodLine = yMinVerticalLineSet[tgt1LeftXPtr];
+				}
+				if (minYGoodLine > yMinVerticalLineSet[tgt1RightXPtr]) {
+					minYGoodLine = yMinVerticalLineSet[tgt1RightXPtr];
+				}
+				if (minYGoodLine > yMinVerticalLineSet[tgt2LeftXPtr]) {
+					minYGoodLine = yMinVerticalLineSet[tgt2LeftXPtr];
+				}
+				if (minYGoodLine > yMinVerticalLineSet[tgt2RightXPtr]) {
+					minYGoodLine = yMinVerticalLineSet[tgt2RightXPtr];
+				}
+				
+				if (maxYGoodLine < yMaxVerticalLineSet[tgt1LeftXPtr]) {
+					maxYGoodLine = yMaxVerticalLineSet[tgt1LeftXPtr];
+				}
+				if (maxYGoodLine < yMaxVerticalLineSet[tgt1RightXPtr]) {
+					maxYGoodLine = yMaxVerticalLineSet[tgt1RightXPtr];
+				}
+				if (maxYGoodLine < yMaxVerticalLineSet[tgt2LeftXPtr]) {
+					maxYGoodLine = yMaxVerticalLineSet[tgt2LeftXPtr];
+				}
+				if (maxYGoodLine < yMaxVerticalLineSet[tgt2RightXPtr]) {
+					maxYGoodLine = yMaxVerticalLineSet[tgt2RightXPtr];
+				}
+				
 				if (bestWt > 0) {
 					// Find the horizontal lines of the targets
 					double[] xMinHorizontalLine = new double[ocvLineCount]; // Minimum y coordinate of the particular vertical line
@@ -460,7 +491,7 @@ public class HelloOCV {
 					double[] xMinHorizontalLineSet = new double[ocvLineCount]; // Minimum y coordinate of the particular vertical line set
 					double[] xMaxHorizontalLineSet = new double[ocvLineCount]; // Maximum y coordinate of the particular vertical line set
 					
-					// Having chosen our four best lines, determine where we'll look for our horizontal boundaries of the targets
+					// Having chosen our four best vertical lines, determine where we'll look for our horizontal boundaries of the targets
 					findHorizontalLines(edgeID, targetLines, nominalVerticalLineX, yMinVerticalLineSet, yMaxVerticalLineSet, xMinHorizontalLine, xMaxHorizontalLine, xMinHorizontalLineSet, xMaxHorizontalLineSet);
 					
 					// While actually derived some time ago, write to file the HSL output
@@ -591,7 +622,9 @@ public class HelloOCV {
 		yAtXFitBL = 0;
 		yAtXFitBR = 0;
 		percHLFPts = 0;
-		hiPixelValue = 0;
+		minYGoodLine = 0;
+		maxYGoodLine = 0;
+		//hiPixelValue = 0;
 	}
 	
 	private static void printLineFit() throws IOException {
@@ -634,6 +667,7 @@ public class HelloOCV {
 			//jpgFile = new String("ConfRoom12in.jpg");
 			//jpgFile = new String("ConfRoom104in.jpg");
 			//jpgFile = new String("KitchLtOn20in60d.jpg");
+			jpgFile = new String("KtchGrTgtTape50in0d.jpg");
 			//jpgFile = new String("KitchLtOn46in45d.jpg");
 			//jpgFile = new String("OriginalVImage.jpg");
 			//jpgFile = new String("LTGym6f45d.jpg");
@@ -641,7 +675,7 @@ public class HelloOCV {
 			//jpgFile = new String("LTGym8ft.jpg");
 			//jpgFile = new String("LTGym18ft.jpg"); 
 			//jpgFile = new String("BreakRoom0221.jpg");
-			jpgFile = new String("TestImage1.jpg");
+			//jpgFile = new String("TestImage1.jpg");
 			//jpgFile = new String("Image_for_PostAnalysis.jpg");
 		}
 
@@ -1054,6 +1088,8 @@ public class HelloOCV {
 		// While this isn't yet a percent, we start by totaling the points found
 		percHLFPts = ptCount;
 		
+		if (ptCount == 0) ptCount = 1;
+		
 		double xbar = sumx / ptCount;
 		double ybar = sumy / ptCount;
 		
@@ -1070,19 +1106,28 @@ public class HelloOCV {
         }
         
         // Finally, calculate the slope and y intercept of the best fit top line
-        topSlope = (ptCount * xybar) - (sumx * sumy);
-        topSlope = topSlope / ((ptCount * xxbar) - (sumx * sumx));
-        topIntercept = (ybar - topSlope * xbar);
+        if (ptCount > 0) {
+	        topSlope = (ptCount * xybar) - (sumx * sumy);
+	        topSlope = topSlope / ((ptCount * xxbar) - (sumx * sumx));
+	        topIntercept = (ybar - topSlope * xbar);
+        } else {
+        	topSlope = 0;
+        	topIntercept = maxYGoodLine;
+        }        	
         
         // At least while we want quality estimates, calculate error data from the linefit
-        for (int i = 0; i < 12; i++) {
-        	if (yAtYfind[i] > 0) {
-        		yFit = topSlope * xAtYfind[i] + topIntercept;
-        		y1AtYfind[i] += (yFit - yAtYfind[i]) * (yFit - yAtYfind[i]);
-        		stdErrT = y1AtYfind[i] / ptCount;	// This will only be "correct" at the last point
-        	}
+        if (ptCount > 0) {
+        	for (int i = 0; i < 12; i++) {
+	        	if (yAtYfind[i] > 0) {
+	        		yFit = topSlope * xAtYfind[i] + topIntercept;
+	        		y1AtYfind[i] += (yFit - yAtYfind[i]) * (yFit - yAtYfind[i]);
+	        		stdErrT = y1AtYfind[i] / ptCount;	// This will only be "correct" at the last point
+	        	}
+	        }
+	        stdErr = Math.sqrt(stdErrT);
+        } else {
+        	stdErr = 50;
         }
-        stdErr = Math.sqrt(stdErrT);
         
 		if (TROUBLESHOOTING_MODE) System.out.println("Determined slope / intercept of " + Double.toString(topSlope) + " / " + Double.toString(topIntercept));
         yAtXFitTL = topSlope * nomXTgt1L + topIntercept;
@@ -1176,6 +1221,8 @@ public class HelloOCV {
 		percHLFPts += ptCount;
 		percHLFPts = percHLFPts / 24;		// We're looking for a total of 24 points to linefit top and bottom
 		
+		if (ptCount == 0) ptCount = 1;
+		
 		xbar = sumx / ptCount;
 		ybar = sumy / ptCount;
 		
@@ -1192,20 +1239,26 @@ public class HelloOCV {
 			}
         }
         
-        // Finally, calculate the slope and y intercept of the best fit "bottom" line
-        bottomSlope = (ptCount * xybar) - (sumx * sumy);					// Numerator
-        bottomSlope = bottomSlope / ((ptCount * xxbar) - (sumx * sumx));	// Numerator / Denominator
-        bottomIntercept = (ybar - bottomSlope * xbar);
-
-        // At least while we want quality estimates, calculate error data from the linefit
-        for (int i = 0; i < 12; i++) {
-        	if (yAtYfind[i] > 0) {
-        		yFit = bottomSlope * xAtYfind[i] + bottomIntercept;
-        		y1AtYfind[i] += (yFit - yAtYfind[i]) * (yFit - yAtYfind[i]);
-        		stdErrB = y1AtYfind[i] / ptCount;	// This will only be "correct" at the last point
-        	}
+        if (ptCount > 0) {
+	        // Finally, calculate the slope and y intercept of the best fit "bottom" line
+	        bottomSlope = (ptCount * xybar) - (sumx * sumy);					// Numerator
+	        bottomSlope = bottomSlope / ((ptCount * xxbar) - (sumx * sumx));	// Numerator / Denominator
+	        bottomIntercept = (ybar - bottomSlope * xbar);
+	
+	        // At least while we want quality estimates, calculate error data from the linefit
+	        for (int i = 0; i < 12; i++) {
+	        	if (yAtYfind[i] > 0) {
+	        		yFit = bottomSlope * xAtYfind[i] + bottomIntercept;
+	        		y1AtYfind[i] += (yFit - yAtYfind[i]) * (yFit - yAtYfind[i]);
+	        		stdErrB = y1AtYfind[i] / ptCount;	// This will only be "correct" at the last point
+	        	}
+	        }
+	        stdErr += Math.sqrt(stdErrB);
+        } else {
+        	bottomSlope = 0;
+        	bottomIntercept = minYGoodLine;
+        	stdErr += 50;
         }
-        stdErr += Math.sqrt(stdErrB);
         
 		//if (TROUBLESHOOTING_MODE) System.out.println("Determined slope / intercept of " + Double.toString(bottomSlope) + " / " + Double.toString(bottomIntercept));
         yAtXFitBL = bottomSlope * nomXTgt1L + bottomIntercept;
@@ -1405,7 +1458,11 @@ public class HelloOCV {
 				}
 			}
 		}
-		nomYTgtTop = nomYTgtTop / useCount;
+		if (useCount > 0) {
+			nomYTgtTop = nomYTgtTop / useCount;
+		} else {
+			nomYTgtTop = maxYGoodLine;
+		}
 		
 		// Throwing out outliers, estimate the Y value for the bottom of the target
 		useCount = 0;
@@ -1432,7 +1489,11 @@ public class HelloOCV {
 				}
 			}
 		}
-		nomYTgtBtm = nomYTgtBtm / useCount;
+		if (useCount > 0) {
+			nomYTgtBtm = nomYTgtBtm / useCount;
+		} else {
+			nomYTgtBtm = minYGoodLine;
+		}
 		
 		if (TROUBLESHOOTING_MODE) System.out.println("The top of the target is estimated at " + Double.toString(nomYTgtTop));
 		if (TROUBLESHOOTING_MODE) System.out.println("The bottom of the target is estimated at " + Double.toString(nomYTgtBtm));
@@ -1768,8 +1829,7 @@ public class HelloOCV {
 							testY1 = targetLines[y].ocvY2;
 							testY2 = targetLines[y].ocvY1;
 						}	
-							
-							
+						
 						if (diffVLCount == 0) {
 							//if (TROUBLESHOOTING_MODE) System.out.println("Initializing resulting vertical line " + Integer.toString(x));
 							// Prepare either to compare this segment with other segments in hope of appending vertical lines...
