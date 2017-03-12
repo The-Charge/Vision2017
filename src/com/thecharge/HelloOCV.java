@@ -33,17 +33,17 @@ import javax.swing.event.*;
 
 public class HelloOCV {
 	private static final boolean TROUBLESHOOTING_MODE = true;
-	private static final boolean USE_VIDEO = false;
+	private static final boolean USE_VIDEO = true;
 	private static final boolean JPGS_TO_C = true;
 	private static final boolean WRITE_NETW_TBLS = false;
 	private static final boolean INIT_WEBCAM_SETTINGS = false;
 	private static final boolean CALIBRATION_MODE = false;
 	private static boolean jpgMemMgmt = false;		// Recommended to be set true until the memory management issue is solved
-	private static boolean analyzeCamera = false;	// Generate a CSV file tracking camera settings vs results
+	private static boolean analyzeCamera = true;	// Generate a CSV file tracking camera settings vs results
 	private static final int MAX_CALIBR_PASS = 999;
 	private static boolean userStop = false;
-	private static final double INCH_GAP_BETW = 6.25; // Distance between reflective targets
-	private static final double INCH_TGT_WIDE = 2; // Width of the reflective target
+	private static final double INCH_GAP_BETW = 6.375; // Distance between reflective targets
+	private static final double INCH_TGT_WIDE = 1.875; // Width of the reflective target
 	private static final double INCH_TGT_HEIGHT = 5; // Height of the reflective target
 	private static final double HALF_FIELD_ANGLE_H = 34;	// Half of the angle of view for the camera in operation
 	private static final double HALF_FIELD_ANGLE_V = 20.59;	// 21.3
@@ -69,13 +69,14 @@ public class HelloOCV {
 	private static double halfFoViewV = 0;
 	private static double tanHlfAngleH = Math.tan(Math.toRadians(HALF_FIELD_ANGLE_H));
 	private static double tanHlfAngleV = Math.tan(Math.toRadians(HALF_FIELD_ANGLE_V));
+	private static double pxlH2Vratio = 1.129265637;	// Carefully measuring a known sized target by inches then pixels
 	private static double dist2Target = 0;	// Calculated distance to the target in inches
-	private static final double INITIAL_LO_HUE = 57;	//83;	//88;	//40,65,68,32, 73;		//74;
-	private static final double INITIAL_HI_HUE = 95;	//108;	//94;	//142,120,117, 103;	//96;	// 93.99317406143345;
-	private static final double INITIAL_LO_SATURATION = 63;	//112;	//183;	//156,211, 14;	//40;	//45.86330935251798;
-	private static final double INITIAL_HI_SATURATION = 247;	//255;	//250;	//255, 255;	//140;	//153;	// 128.80546075085323;
-	private static final double INITIAL_LO_LUMIN = 67;	//71;	//26;	//89,99,66, 135;	//80.26079136690647;
-	private static final double INITIAL_HI_LUMIN = 205;	//244;	//132;	//133,255,166, 235;	//163.61774744027304;
+	private static final double INITIAL_LO_HUE = 36;	//83;	//88;	//40,65,68,32, 73;		//74;
+	private static final double INITIAL_HI_HUE = 76;	//108;	//94;	//142,120,117, 103;	//96;	// 93.99317406143345;
+	private static final double INITIAL_LO_SATURATION = 138;	//112;	//183;	//156,211, 14;	//40;	//45.86330935251798;
+	private static final double INITIAL_HI_SATURATION = 255;	//255;	//250;	//255, 255;	//140;	//153;	// 128.80546075085323;
+	private static final double INITIAL_LO_LUMIN = 25;	//71;	//26;	//89,99,66, 135;	//80.26079136690647;
+	private static final double INITIAL_HI_LUMIN = 255;	//244;	//132;	//133,255,166, 235;	//163.61774744027304;
 	//LTGym8ft => 81 / 114 / 7 / 140 / 85 / 254
 	//BreakRoom => 71 / 110 / 17 / 253 / 12 / 255
 	//LTGym6f70d.jpg => 83 / 102 / 57 / 255 / 71 / 185
@@ -105,9 +106,9 @@ public class HelloOCV {
 	private static double nomXTgt1R = 0;
 	private static double nomXTgt2L = 0;
 	private static double nomXTgt2R = 0;
-	private static double[] xAtYfind = new double[12];
-	private static double[] yAtYfind = new double[12];
-	private static double[] y1AtYfind = new double[12];
+	private static double[] xAtYfind = new double[32];	// 6 points from each of the horizontals; 4 top vertical; 4 bottom vertical
+	private static double[] yAtYfind = new double[32];
+	private static double[] y1AtYfind = new double[32];	
 	private static double stdErr = 0;		// Relative to the upcoming linefit we want to calculate standard error for an indication of quality
 	private static double stdErrT = 0;
 	private static double stdErrB = 0;
@@ -330,8 +331,11 @@ public class HelloOCV {
 			//System.currentTimeMillis()
 			
 		//} while ((calibrPass < MAX_CALIBR_PASS) || (USE_VIDEO));
-		} while (executionCount < 1);
+		//} while (executionCount < 1);
+		//} while (executionCount < 300);
+		} while (imageQuality < 0.6);
 		//} while ((dist2Target == 0) || (Double.toString(dist2Target).equals("NaN")));
+		//} while (dist2TargetTemp < 15);
 		//} while ((dist2TargetTemp == 0) || (dist2TargetTemp.isNaN()));
 		
 		if (USE_VIDEO)
@@ -399,7 +403,7 @@ public class HelloOCV {
 			Imgproc.cvtColor(temp, hslTO, Imgproc.COLOR_GRAY2BGR);
 			
 			for (int x = 0; x < ocvLineCount; x++){
-				Imgproc.line(hslTO, targetLines[x].point1(), targetLines[x].point2(), new Scalar(10,10,250), 2);
+				Imgproc.line(hslTO, targetLines[x].point1(), targetLines[x].point2(), new Scalar(10,10,250), 1);
 			}
 			// Save a copy of the amended file with the identified lines
 			if (JPGS_TO_C) Imgcodecs.imwrite("HSLout_with_lines.jpg", hslTO);
@@ -484,6 +488,31 @@ public class HelloOCV {
 					maxYGoodLine = yMaxVerticalLineSet[tgt2RightXPtr];
 				}
 				
+				// Get the corresponding extreme (x,y) points from the vertical lines
+				xAtYfind[12] = nominalVerticalLineX[tgt1LeftXPtr];
+				yAtYfind[12] = yMaxVerticalLineSet[tgt1LeftXPtr];
+				
+				xAtYfind[13] = nominalVerticalLineX[tgt1RightXPtr];
+				yAtYfind[13] = yMaxVerticalLineSet[tgt1RightXPtr];
+				
+				xAtYfind[14] = nominalVerticalLineX[tgt2LeftXPtr];
+				yAtYfind[14] = yMaxVerticalLineSet[tgt2LeftXPtr];
+				
+				xAtYfind[15] = nominalVerticalLineX[tgt2RightXPtr];
+				yAtYfind[15] = yMaxVerticalLineSet[tgt2RightXPtr];
+				
+				xAtYfind[28] = nominalVerticalLineX[tgt1LeftXPtr];
+				yAtYfind[28] = yMinVerticalLineSet[tgt1LeftXPtr];
+				
+				xAtYfind[29] = nominalVerticalLineX[tgt1RightXPtr];
+				yAtYfind[29] = yMinVerticalLineSet[tgt1RightXPtr];
+				
+				xAtYfind[30] = nominalVerticalLineX[tgt2LeftXPtr];
+				yAtYfind[30] = yMinVerticalLineSet[tgt2LeftXPtr];
+				
+				xAtYfind[31] = nominalVerticalLineX[tgt2RightXPtr];
+				yAtYfind[31] = yMinVerticalLineSet[tgt2RightXPtr];
+				
 				if (bestWt > 0) {
 					// Find the horizontal lines of the targets
 					double[] xMinHorizontalLine = new double[ocvLineCount]; // Minimum y coordinate of the particular vertical line
@@ -522,10 +551,7 @@ public class HelloOCV {
 						Imgcodecs.imwrite("Image_for_PostAnalysis.jpg", image);
 					}
 					poorImageCount++;
-
 				}
-				
-
 			}
 		} else {
 			dist2Target = 0;
@@ -554,7 +580,7 @@ public class HelloOCV {
 			dist2Target = halfFoViewV / tanHlfAngleV;
 			System.out.println("The estimated distance to the target (in inches) is " + Double.toString(dist2Target));
 			estTgtW = (TARGET_WIDTH / INCH_TGT_HEIGHT) * (yAtXFitTL - yAtXFitBL);
-			
+			estTgtW = estTgtW / pxlH2Vratio;
 		} else {
 			
 			// We are closer to the right edge of the target
@@ -562,7 +588,7 @@ public class HelloOCV {
 			dist2Target = halfFoViewV / tanHlfAngleV;
 			System.out.println("The estimated distance to the target (in inches) is " + Double.toString(dist2Target));
 			estTgtW = (TARGET_WIDTH / INCH_TGT_HEIGHT) * (yAtXFitTR - yAtXFitBR);
-			
+			estTgtW = estTgtW / pxlH2Vratio;
 		}
 		
 		//
@@ -635,7 +661,7 @@ public class HelloOCV {
 			outputStream = new PrintWriter(new FileWriter("XYLineFit.txt"));
 
 			outputStream.println("xValue,yValue");
-			for (int i = 0; i <= 11; i++) {
+			for (int i = 0; i <= 31; i++) {
 				LineOut = Double.toString(xAtYfind[i])  + "," + Double.toString(yAtYfind[i]);
 				outputStream.println(LineOut);
 				// }
@@ -667,7 +693,9 @@ public class HelloOCV {
 			//jpgFile = new String("ConfRoom12in.jpg");
 			//jpgFile = new String("ConfRoom104in.jpg");
 			//jpgFile = new String("KitchLtOn20in60d.jpg");
-			jpgFile = new String("KtchGrTgtTape50in0d.jpg");
+			//jpgFile = new String("KtchGrTgtTape50in0d.jpg");
+			//jpgFile = new String("XYCalibration23in0d.jpg");
+			jpgFile = new String("KitchenTemp.jpg");
 			//jpgFile = new String("KitchLtOn46in45d.jpg");
 			//jpgFile = new String("OriginalVImage.jpg");
 			//jpgFile = new String("LTGym6f45d.jpg");
@@ -804,9 +832,9 @@ public class HelloOCV {
 		}
 		
 		if (vLineSet == 3) {
-			imageQuality += 0.6;
+			imageQuality += 0.5;
 		} else if (vLineSet == 4) {
-			imageQuality += 0.45;
+			imageQuality += 0.35;
 		} else if (vLineSet == 5) {
 			imageQuality += 0.3;
 		} else if (vLineSet == 6) {
@@ -1009,6 +1037,11 @@ public class HelloOCV {
 		Random rand = new Random();
 		if (TROUBLESHOOTING_MODE) System.out.println(" ");
 		
+		// Clear out the previous image's y1 values from the line analysis
+		for (int i = 0; i < 32; i++) {
+			y1AtYfind[i] = 0;
+		}
+		
 		// Get linefit coordinates for the "top" horizontal lines of target 1
 		for (int zLpCtr1 = 0; zLpCtr1 < ocvLineCount; zLpCtr1++) {
 			if (edgeID[zLpCtr1] == "1HT") {
@@ -1068,15 +1101,18 @@ public class HelloOCV {
 			} 
 		}
 		
+		// Note that (x,y) pairs 12 - 15 were grabbed from the vertical line max values
 		
-		if (TROUBLESHOOTING_MODE) System.out.println(" ");
+		if (TROUBLESHOOTING_MODE) {
+			System.out.println(" ");
+		}
 		
 		// Now make the calculations necessary to perform the slope / intercept calculations of the horizontal best fit
 		double sumx = 0;
 		double sumx2 = 0;
 		double sumy = 0;
 		int ptCount = 0;
-		for (int zLpCtr1 = 0; zLpCtr1 < 12; zLpCtr1++) {
+		for (int zLpCtr1 = 0; zLpCtr1 < 16; zLpCtr1++) {
 			if (yAtYfind[zLpCtr1] > 0) {
 				ptCount ++;
 				sumx += xAtYfind[zLpCtr1];
@@ -1088,6 +1124,7 @@ public class HelloOCV {
 		// While this isn't yet a percent, we start by totaling the points found
 		percHLFPts = ptCount;
 		
+		// Avoid a 0 / 0 situation 
 		if (ptCount == 0) ptCount = 1;
 		
 		double xbar = sumx / ptCount;
@@ -1096,7 +1133,7 @@ public class HelloOCV {
         // second pass: compute summary statistics
         double xxbar = 0.0, yybar = 0.0, xybar = 0.0;
         ptCount = 0;
-        for (int zLpCtr1 = 0; zLpCtr1 < 12; zLpCtr1++) {
+        for (int zLpCtr1 = 0; zLpCtr1 < 16; zLpCtr1++) {
 			if (yAtYfind[zLpCtr1] > 0) {
 	            ptCount++;
 	            xxbar += (xAtYfind[zLpCtr1]) * (xAtYfind[zLpCtr1]);
@@ -1106,7 +1143,7 @@ public class HelloOCV {
         }
         
         // Finally, calculate the slope and y intercept of the best fit top line
-        if (ptCount > 0) {
+        if (ptCount > 1) {
 	        topSlope = (ptCount * xybar) - (sumx * sumy);
 	        topSlope = topSlope / ((ptCount * xxbar) - (sumx * sumx));
 	        topIntercept = (ybar - topSlope * xbar);
@@ -1115,18 +1152,18 @@ public class HelloOCV {
         	topIntercept = maxYGoodLine;
         }        	
         
-        // At least while we want quality estimates, calculate error data from the linefit
-        if (ptCount > 0) {
-        	for (int i = 0; i < 12; i++) {
+        // At least while we want quality estimates, calculate error data from the line-fit
+        if (ptCount > 1) {
+        	for (int i = 0; i < 16; i++) {
 	        	if (yAtYfind[i] > 0) {
 	        		yFit = topSlope * xAtYfind[i] + topIntercept;
 	        		y1AtYfind[i] += (yFit - yAtYfind[i]) * (yFit - yAtYfind[i]);
 	        		stdErrT = y1AtYfind[i] / ptCount;	// This will only be "correct" at the last point
 	        	}
 	        }
-	        stdErr = Math.sqrt(stdErrT);
+	        stdErrT = Math.sqrt(stdErrT);
         } else {
-        	stdErr = 50;
+        	stdErrT = 50;
         }
         
 		if (TROUBLESHOOTING_MODE) System.out.println("Determined slope / intercept of " + Double.toString(topSlope) + " / " + Double.toString(topIntercept));
@@ -1134,22 +1171,14 @@ public class HelloOCV {
         yAtXFitTR = topSlope * nomXTgt2R + topIntercept;
 		//if (TROUBLESHOOTING_MODE) System.out.println("Top Left x / y of " + Double.toString(nomXTgt1L) + " / " + Double.toString(yAtXFitTL));
 		//if (TROUBLESHOOTING_MODE) System.out.println("Top Right x / y of " + Double.toString(nomXTgt2R) + " / " + Double.toString(yAtXFitTR));
-		if (TROUBLESHOOTING_MODE) System.out.println(" ");
 		
-		// Repeat for the "bottom" line
-		
-		// Clear out the previous y values from the top line analysis (note that we reuse the x values)
-		for (int i = 0; i < 12; i++) {
-			yAtYfind[i] = 0;
-			y1AtYfind[i] = 0;
-		}
 		// Get linefit coordinates for the "bottom" horizontal lines of target 1		for (int zLpCtr1 = 0; zLpCtr1 < ocvLineCount; zLpCtr1++) {
 		for (int zLpCtr1 = 0; zLpCtr1 < ocvLineCount; zLpCtr1++) {
 			if (edgeID[zLpCtr1] == "1HB") {
 				//if (TROUBLESHOOTING_MODE) System.out.println("Find linefit coordinates for line " + Integer.toString(zLpCtr1));
 				mSlope = (targetLines[zLpCtr1].ocvY2 - targetLines[zLpCtr1].ocvY1) / (targetLines[zLpCtr1].ocvX2 - targetLines[zLpCtr1].ocvX1);
 				yIntcpt = targetLines[zLpCtr1].ocvY1 - mSlope * targetLines[zLpCtr1].ocvX1;
-				for (int zLpCtr2 = 0; zLpCtr2 < 6; zLpCtr2++) {
+				for (int zLpCtr2 = 16; zLpCtr2 < 22; zLpCtr2++) {
 					// Don't generate linefit points that don't reside inside the identified line 
 					if (targetLines[zLpCtr1].ocvX2 > targetLines[zLpCtr1].ocvX1) {
 						testX1 = targetLines[zLpCtr1].ocvX1;
@@ -1179,7 +1208,7 @@ public class HelloOCV {
 				mSlope = (targetLines[zLpCtr1].ocvY2 - targetLines[zLpCtr1].ocvY1) / (targetLines[zLpCtr1].ocvX2 - targetLines[zLpCtr1].ocvX1);
 				yIntcpt = targetLines[zLpCtr1].ocvY1 - mSlope * targetLines[zLpCtr1].ocvX1;
 				//if (TROUBLESHOOTING_MODE) System.out.println("Slope and Intercept as " + Double.toString(mSlope) + " / " + Double.toString(yIntcpt));
-				for (int zLpCtr2 = 6; zLpCtr2 < 12; zLpCtr2++) {
+				for (int zLpCtr2 = 22; zLpCtr2 < 28; zLpCtr2++) {
 					// Don't generate linefit points that don't reside inside the identified line 
 					if (targetLines[zLpCtr1].ocvX2 > targetLines[zLpCtr1].ocvX1) {
 						testX1 = targetLines[zLpCtr1].ocvX1;
@@ -1209,7 +1238,7 @@ public class HelloOCV {
 		sumx2 = 0;
 		sumy = 0;
 		ptCount = 0;
-		for (int zLpCtr1 = 0; zLpCtr1 < 12; zLpCtr1++) {
+		for (int zLpCtr1 = 16; zLpCtr1 < 32; zLpCtr1++) {
 			if (yAtYfind[zLpCtr1] > 0) {
 				ptCount ++;
 				sumx += xAtYfind[zLpCtr1];
@@ -1219,8 +1248,9 @@ public class HelloOCV {
 		}
 		
 		percHLFPts += ptCount;
-		percHLFPts = percHLFPts / 24;		// We're looking for a total of 24 points to linefit top and bottom
+		percHLFPts = percHLFPts / 32;		// We're looking for a total of 32 points to linefit top and bottom
 		
+		// Again, avoid a 0 / 0 situation
 		if (ptCount == 0) ptCount = 1;
 		
 		xbar = sumx / ptCount;
@@ -1230,7 +1260,7 @@ public class HelloOCV {
         yybar = 0.0;
         xybar = 0.0;
         ptCount = 0;
-        for (int zLpCtr1 = 0; zLpCtr1 < 12; zLpCtr1++) {
+        for (int zLpCtr1 = 16; zLpCtr1 < 32; zLpCtr1++) {
 			if (yAtYfind[zLpCtr1] > 0) {
 	            ptCount++;
 	            xxbar += (xAtYfind[zLpCtr1]) * (xAtYfind[zLpCtr1]);
@@ -1239,28 +1269,29 @@ public class HelloOCV {
 			}
         }
         
-        if (ptCount > 0) {
+        if (ptCount > 1) {
 	        // Finally, calculate the slope and y intercept of the best fit "bottom" line
 	        bottomSlope = (ptCount * xybar) - (sumx * sumy);					// Numerator
 	        bottomSlope = bottomSlope / ((ptCount * xxbar) - (sumx * sumx));	// Numerator / Denominator
 	        bottomIntercept = (ybar - bottomSlope * xbar);
 	
-	        // At least while we want quality estimates, calculate error data from the linefit
-	        for (int i = 0; i < 12; i++) {
+	        // At least while we want quality estimates, calculate error data from the line-fit
+	        for (int i = 16; i < 32; i++) {
 	        	if (yAtYfind[i] > 0) {
 	        		yFit = bottomSlope * xAtYfind[i] + bottomIntercept;
 	        		y1AtYfind[i] += (yFit - yAtYfind[i]) * (yFit - yAtYfind[i]);
 	        		stdErrB = y1AtYfind[i] / ptCount;	// This will only be "correct" at the last point
 	        	}
 	        }
-	        stdErr += Math.sqrt(stdErrB);
+	        stdErrB += Math.sqrt(stdErrB);
+	        
         } else {
         	bottomSlope = 0;
         	bottomIntercept = minYGoodLine;
-        	stdErr += 50;
+        	stdErrB += 50;
         }
         
-		//if (TROUBLESHOOTING_MODE) System.out.println("Determined slope / intercept of " + Double.toString(bottomSlope) + " / " + Double.toString(bottomIntercept));
+		if (TROUBLESHOOTING_MODE) System.out.println("Determined slope / intercept of " + Double.toString(bottomSlope) + " / " + Double.toString(bottomIntercept));
         yAtXFitBL = bottomSlope * nomXTgt1L + bottomIntercept;
         yAtXFitBR = bottomSlope * nomXTgt2R + bottomIntercept;
         Point ptTL = new Point(nomXTgt1L, yAtXFitTL);
@@ -1273,7 +1304,7 @@ public class HelloOCV {
 		//if (TROUBLESHOOTING_MODE) System.out.println("Bottom Right x / y of " + Double.toString(nomXTgt2R) + " / " + Double.toString(yAtXFitBR));
 		if (TROUBLESHOOTING_MODE) System.out.println(" ");
 
-		// Update our picture with the new determined top line
+		// Update our picture with the new determined lines / rectangle
 		Imgproc.line(image, ptTL, ptTR, new Scalar(0,0,255), 1);
 		Imgproc.line(image, ptBL, ptBR, new Scalar(0,0,255), 1);
 		Imgproc.line(image, ptTL, ptBL, new Scalar(0,0,255), 1);
@@ -1548,20 +1579,28 @@ public class HelloOCV {
 		incrX = (nomXTgt1R - nomXTgt1L) / 7;
 		xAtYfind[0] = nomXTgt1L + incrX;
 		yAtYfind[0] = 0;
+		xAtYfind[16] = nomXTgt1L + incrX;
+		yAtYfind[16] = 0;
 		//if (TROUBLESHOOTING_MODE) System.out.println("Find Y at X = " + xAtYfind[0]);
 		for (int zLpCtr1 = 1; zLpCtr1 < 6; zLpCtr1++) {
 			xAtYfind[zLpCtr1] = xAtYfind[zLpCtr1 - 1] + incrX;
 			yAtYfind[zLpCtr1] = 0;
+			xAtYfind[zLpCtr1 + 16] = xAtYfind[zLpCtr1 - 1] + incrX;
+			yAtYfind[zLpCtr1 + 16] = 0;
 			//if (TROUBLESHOOTING_MODE) System.out.println("Find Y at X = " + xAtYfind[zLpCtr1]);
 		}
 		
 		incrX = (nomXTgt2R - nomXTgt2L) / 7;
 		xAtYfind[6] = nomXTgt2L + incrX;
 		yAtYfind[6] = 0;
+		xAtYfind[22] = nomXTgt2L + incrX;
+		yAtYfind[22] = 0;
 		//if (TROUBLESHOOTING_MODE) System.out.println("Find Y at X = " + xAtYfind[6]);
 		for (int zLpCtr1 = 7; zLpCtr1 < 12; zLpCtr1++) {
 			xAtYfind[zLpCtr1] = xAtYfind[zLpCtr1 - 1] + incrX;
 			yAtYfind[zLpCtr1] = 0;
+			xAtYfind[zLpCtr1 + 16] = xAtYfind[zLpCtr1 - 1] + incrX;
+			yAtYfind[zLpCtr1 + 16] = 0;
 			//if (TROUBLESHOOTING_MODE) System.out.println("Find Y at X = " + xAtYfind[zLpCtr1]);
 		}
 		if (TROUBLESHOOTING_MODE) System.out.println(" ");
@@ -1687,12 +1726,12 @@ public class HelloOCV {
 			rectRatio = (nominalVerticalLineX[tgt2LeftXPtr] - nominalVerticalLineX[tgt1RightXPtr]);
 			rectRatio = rectRatio / (nominalVerticalLineX[tgt1RightXPtr] - nominalVerticalLineX[tgt1LeftXPtr]);
 			lTgtAccrW = rectRatio / refRatio;
-			if (TROUBLESHOOTING_MODE) System.out.println("The left target accuracy is 1 : " + Double.toString(lTgtAccrW));
+			if (TROUBLESHOOTING_MODE) System.out.println("The left obs:act gap to strip target accuracy is 1 : " + Double.toString(lTgtAccrW));
 			
 			rectRatio = (nominalVerticalLineX[tgt2LeftXPtr] - nominalVerticalLineX[tgt1RightXPtr]);
 			rectRatio = rectRatio / (nominalVerticalLineX[tgt2RightXPtr] - nominalVerticalLineX[tgt2LeftXPtr]);
 			rTgtAccrW = rectRatio / refRatio;
-			if (TROUBLESHOOTING_MODE) System.out.println("The right target accuracy is 1 : " + Double.toString(rTgtAccrW));
+			if (TROUBLESHOOTING_MODE) System.out.println("The right obs:act gap to strip target accuracy is 1 : " + Double.toString(rTgtAccrW));
 			
 		} else if (vLineSet < 3) {
 			// We wouldn't expect to arrive here, but if we do we need to gracefully indicate that processing didn't go well
