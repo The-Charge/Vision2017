@@ -32,14 +32,14 @@ import javax.swing.*;
 import javax.swing.event.*;
 
 public class HelloOCV {
-	private static final boolean TROUBLESHOOTING_MODE = true;
+	private static final boolean TROUBLESHOOTING_MODE = false;
 	private static final boolean USE_VIDEO = true;
-	private static final boolean JPGS_TO_C = true;
+	private static final boolean JPGS_TO_C = false;
 	private static final boolean WRITE_NETW_TBLS = false;
 	private static final boolean INIT_WEBCAM_SETTINGS = false;
 	private static final boolean CALIBRATION_MODE = false;
-	private static boolean jpgMemMgmt = false;		// Recommended to be set true until the memory management issue is solved
-	private static boolean analyzeCamera = true;	// Generate a CSV file tracking camera settings vs results
+	private static boolean jpgMemMgmt = true;		// Recommended to be set true until the memory management issue is solved
+	private static boolean analyzeCamera = false;	// Generate a CSV file tracking camera settings vs results
 	private static final int MAX_CALIBR_PASS = 999;
 	private static boolean userStop = false;
 	private static final double INCH_GAP_BETW = 6.375; // Distance between reflective targets
@@ -71,12 +71,12 @@ public class HelloOCV {
 	private static double tanHlfAngleV = Math.tan(Math.toRadians(HALF_FIELD_ANGLE_V));
 	private static double pxlH2Vratio = 1.129265637;	// Carefully measuring a known sized target by inches then pixels
 	private static double dist2Target = 0;	// Calculated distance to the target in inches
-	private static final double INITIAL_LO_HUE = 53;	//83;	//88;	//40,65,68,32, 73;		//74;
-	private static final double INITIAL_HI_HUE = 109;	//108;	//94;	//142,120,117, 103;	//96;	// 93.99317406143345;
-	private static final double INITIAL_LO_SATURATION = 25;	//112;	//183;	//156,211, 14;	//40;	//45.86330935251798;
+	private static final double INITIAL_LO_HUE = 86;	//83;	//88;	//40,65,68,32, 73;		//74;
+	private static final double INITIAL_HI_HUE = 102;	//108;	//94;	//142,120,117, 103;	//96;	// 93.99317406143345;
+	private static final double INITIAL_LO_SATURATION = 144;	//112;	//183;	//156,211, 14;	//40;	//45.86330935251798;
 	private static final double INITIAL_HI_SATURATION = 255;	//255;	//250;	//255, 255;	//140;	//153;	// 128.80546075085323;
-	private static final double INITIAL_LO_LUMIN = 41;	//71;	//26;	//89,99,66, 135;	//80.26079136690647;
-	private static final double INITIAL_HI_LUMIN = 211;	//244;	//132;	//133,255,166, 235;	//163.61774744027304;
+	private static final double INITIAL_LO_LUMIN = 44;	//71;	//26;	//89,99,66, 135;	//80.26079136690647;
+	private static final double INITIAL_HI_LUMIN = 255;	//244;	//132;	//133,255,166, 235;	//163.61774744027304;
 	//LTGym8ft => 81 / 114 / 7 / 140 / 85 / 254
 	//BreakRoom => 71 / 110 / 17 / 253 / 12 / 255
 	//LTGym6f70d.jpg => 83 / 102 / 57 / 255 / 71 / 185
@@ -330,10 +330,10 @@ public class HelloOCV {
 			executionCount ++;
 			//System.currentTimeMillis()
 			
-		//} while ((calibrPass < MAX_CALIBR_PASS) || (USE_VIDEO));
+		} while ((calibrPass < MAX_CALIBR_PASS) || (USE_VIDEO));
 		//} while (executionCount < 1);
 		//} while (executionCount < 300);
-		} while (imageQuality > 0.5);
+		//} while (imageQuality > 0.5);
 		//} while ((dist2Target == 0) || (Double.toString(dist2Target).equals("NaN")));
 		//} while (dist2TargetTemp < 15);
 		//} while ((dist2TargetTemp == 0) || (dist2TargetTemp.isNaN()));
