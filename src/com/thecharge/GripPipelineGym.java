@@ -37,6 +37,8 @@ public class GripPipelineGym /*implements VisionPipeline*/ {
 	//private Number getMatInfoCols;
 	//private Number getMatInfoRows;
 	//private Number getMatInfoHighValue;
+	private MatOfKeyPoint findBlobsOutput = new MatOfKeyPoint();
+
 
 	// This would typically be set comparable to JPGS_TO_C
 	private static final boolean RUNNING_IMAGE_CAPTURE = true;
@@ -79,6 +81,16 @@ public class GripPipelineGym /*implements VisionPipeline*/ {
 		
 		hslThreshold(hslThresholdInput, hslThresholdHue, hslThresholdSaturation, hslThresholdLuminance, hslThresholdOutput);
 
+
+		// Step Find_Blobs0:
+		Mat findBlobsInput = hslThresholdOutput;
+		double findBlobsMinArea = 4.0;
+		double[] findBlobsCircularity = {0.1079136690647482, 0.8805460750853242};
+		boolean findBlobsDarkBlobs = false;
+		findBlobs(findBlobsInput, findBlobsMinArea, findBlobsCircularity, findBlobsDarkBlobs, findBlobsOutput);
+
+
+		
 		// Save the output of the HSL processing
 		if (!RUNNING_IMAGE_CAPTURE) Imgcodecs.imwrite("HSL_Output_Image.jpg", hslThresholdOutput);
 
@@ -119,6 +131,16 @@ public class GripPipelineGym /*implements VisionPipeline*/ {
 		return filterLinesOutput;
 	}
 	 */
+
+	/**
+	 * This method is a generated getter for the output of a Find_Blobs.
+	 * @return MatOfKeyPoint output from Find_Blobs.
+	 */
+	public MatOfKeyPoint findBlobsOutput() {
+		return findBlobsOutput;
+	}
+
+
 
 
 	/**
@@ -177,6 +199,59 @@ public class GripPipelineGym /*implements VisionPipeline*/ {
 			}
 		}
 	}
+	
+	private void findBlobs(Mat input, double minArea, double[] circularity,
+			Boolean darkBlobs, MatOfKeyPoint blobList) {
+			FeatureDetector blobDet = FeatureDetector.create(FeatureDetector.SIMPLEBLOB);
+			try {
+				File tempFile = File.createTempFile("config", ".xml");
+
+				StringBuilder config = new StringBuilder();
+
+				config.append("<?xml version=\"1.0\"?>\n");
+				config.append("<opencv_storage>\n");
+				config.append("<thresholdStep>10.</thresholdStep>\n");
+				config.append("<minThreshold>50.</minThreshold>\n");
+				config.append("<maxThreshold>220.</maxThreshold>\n");
+				config.append("<minRepeatability>2</minRepeatability>\n");
+				config.append("<minDistBetweenBlobs>10.</minDistBetweenBlobs>\n");
+				config.append("<filterByColor>1</filterByColor>\n");
+				config.append("<blobColor>");
+				config.append((darkBlobs ? 0 : 255));
+				config.append("</blobColor>\n");
+				config.append("<filterByArea>1</filterByArea>\n");
+				config.append("<minArea>");
+				config.append(minArea);
+				config.append("</minArea>\n");
+				config.append("<maxArea>");
+				config.append(Integer.MAX_VALUE);
+				config.append("</maxArea>\n");
+				config.append("<filterByCircularity>1</filterByCircularity>\n");
+				config.append("<minCircularity>");
+				config.append(circularity[0]);
+				config.append("</minCircularity>\n");
+				config.append("<maxCircularity>");
+				config.append(circularity[1]);
+				config.append("</maxCircularity>\n");
+				config.append("<filterByInertia>0</filterByInertia>\n");
+				config.append("<filterByConvexity>0</filterByConvexity>\n");
+				config.append("</opencv_storage>\n");
+				FileWriter writer;
+				writer = new FileWriter(tempFile, false);
+				writer.write(config.toString());
+				writer.close();
+				blobDet.read(tempFile.getPath());
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+
+			blobDet.detect(input, blobList);
+		}
+
+
+
+	
+	
 	/*
 	public Size getMatInfoSize() {
 		return getMatInfoSize;
